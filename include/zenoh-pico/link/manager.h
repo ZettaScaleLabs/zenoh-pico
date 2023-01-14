@@ -38,6 +38,9 @@ _z_link_t *_z_new_link_udp_multicast(_z_endpoint_t endpoint);
 #if Z_LINK_BLUETOOTH == 1
 _z_link_t *_z_new_link_bt(_z_endpoint_t endpoint);
 #endif
+#if Z_LINK_LORA == 1
+_z_link_t *_z_new_link_lora(_z_endpoint_t endpoint);
+#endif
 #if Z_LINK_SERIAL == 1
 _z_link_t *_z_new_link_serial(_z_endpoint_t endpoint);
 #endif

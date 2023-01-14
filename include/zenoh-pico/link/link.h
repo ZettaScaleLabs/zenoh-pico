@@ -32,6 +32,10 @@
 #include "zenoh-pico/system/link/bt.h"
 #endif
 
+#if Z_LINK_LORA == 1
+#include "zenoh-pico/system/link/lora.h"
+#endif
+
 #if Z_LINK_SERIAL == 1
 #include "zenoh-pico/system/link/serial.h"
 #endif
@@ -81,6 +85,9 @@ typedef struct _z_link_t {
 #endif
 #if Z_LINK_BLUETOOTH == 1
         _z_bt_socket_t _bt;
+#endif
+#if Z_LINK_LORA == 1
+        _z_lora_socket_t _lora;
 #endif
 #if Z_LINK_SERIAL == 1
         _z_serial_socket_t _serial;

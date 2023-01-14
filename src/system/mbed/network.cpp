@@ -476,4 +476,8 @@ size_t _z_send_serial(_z_sys_net_socket_t sock, const uint8_t *ptr, size_t len) 
 #error "Bluetooth not supported yet on MBED port of Zenoh-Pico"
 #endif
 
+#if Z_LINK_LORA == 1
+#error "LoRa not supported yet on MBED port of Zenoh-Pico"
+#endif
+
 }  // extern "C"

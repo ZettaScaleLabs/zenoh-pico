@@ -35,7 +35,8 @@
     ],
     "dependencies": {
         "BluetoothSerial": "0.16.1",
-        "FreeRTOS": "1.0.0"
+        "FreeRTOS": "1.0.0",
+        "LoRa": "0.8.0"
     },
     "build": {
         "extraScript": "extra_script.py"

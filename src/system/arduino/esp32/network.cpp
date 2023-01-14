@@ -13,6 +13,7 @@
 //
 
 #include <BluetoothSerial.h>
+#include <LoRa.h>
 
 extern "C" {
 #include <netdb.h>
@@ -631,6 +632,117 @@ size_t _z_send_bt(_z_sys_net_socket_t sock, const uint8_t *ptr, size_t len) {
     return len;
 }
 #endif
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#if Z_LINK_LORA == 1
+/*------------------ LoRa sockets ------------------*/
+_z_sys_net_socket_t _z_open_lora(const char *frequency) {
+    _z_sys_net_socket_t sock;
+    sock._err = false;
+
+    SPI.begin(LORA_SCK, LORA_MISO, LORA_MOSI, LORA_CS);
+    LoRa.setPins(LORA_CS, LORA_RST, LORA_IRQ);
+    if (LoRa.begin(915E6) == true) {
+        sock._lora = &LoRa;
+    } else {
+        sock._err = true;
+    }
+
+    return sock;
+}
+
+_z_sys_net_socket_t _z_listen_lora(const char *frequency) {
+    _z_sys_net_socket_t sock;
+    sock._err = false;
+
+    SPI.begin(LORA_SCK, LORA_MISO, LORA_MOSI, LORA_CS);
+    LoRa.setPins(LORA_CS, LORA_RST, LORA_IRQ);
+    if (LoRa.begin(915E6) == true) {
+        sock._lora = &LoRa;
+    } else {
+        sock._err = true;
+    }
+
+    return sock;
+}
+
+void _z_close_lora(_z_sys_net_socket_t sock) {
+    if (sock._err == false) {
+        sock._lora->end();
+        delete sock._lora;
+    }
+}
+
+size_t _z_read_lora(_z_sys_net_socket_t sock, uint8_t *ptr, size_t len) {
+    int packetSize = sock._lora->parsePacket();    
+    for (size_t i = 0; i < packetSize; i++) {
+        if(i == 0) {
+            Serial.print("Received packet: ");
+        }
+        ptr[i] = sock._lora->read();
+        Serial.print(ptr[i], HEX);
+        Serial.print(" ");
+        if(i + 1 == packetSize) {
+            Serial.println("");
+        }
+    }
+    delay(100);  // FIXME: without this, the read task is blocking the other tasks
+
+    return packetSize;
+}
+
+size_t _z_read_exact_lora(_z_sys_net_socket_t sock, uint8_t *ptr, size_t len) {
+    size_t n = 0;
+    uint8_t *pos = &ptr[0];
+
+    do {
+        size_t rb = _z_read_lora(sock, ptr, len - n);
+        if (rb == SIZE_MAX) {
+            n = rb;
+            break;
+        }
+
+        n = n + rb;
+        pos = _z_ptr_u8_offset(pos, n);
+    } while (n != len);
+
+    return n;
+}
+
+size_t _z_send_lora(_z_sys_net_socket_t sock, const uint8_t *ptr, size_t len) {
+    for (size_t i = 0; i < len; i++) {
+        Serial.print(ptr[i], HEX);
+    }
+    Serial.println("");
+    sock._lora->beginPacket();
+    sock._lora->write(ptr, len);
+    sock._lora->endPacket();
+    return len;
+}
+#endif
+
+
+
+
+
+
+
+
+
+
+
 
 #if Z_LINK_SERIAL == 1
 #error "Serial not supported yet on Arduino port of Zenoh-Pico"

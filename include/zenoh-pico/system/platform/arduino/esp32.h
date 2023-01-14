@@ -34,6 +34,7 @@ typedef struct timespec z_clock_t;
 typedef struct timeval z_time_t;
 
 typedef struct BluetoothSerial BluetoothSerial;  // Forward declaration to be used in _z_sys_net_socket_t
+typedef struct LoRaClass LoRaClass;  // Forward declaration to be used in _z_sys_net_socket_t
 
 typedef struct {
     _Bool _err;
@@ -43,6 +44,9 @@ typedef struct {
 #endif
 #if Z_LINK_BLUETOOTH == 1
         BluetoothSerial *_bts;  // As pointer to cross the boundary between C and C++
+#endif
+#if Z_LINK_LORA == 1
+        LoRaClass *_lora;  // As pointer to cross the boundary between C and C++
 #endif
     };
 } _z_sys_net_socket_t;

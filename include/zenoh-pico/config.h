@@ -190,6 +190,13 @@
 #endif
 
 /**
+ * Enable LoRa links.
+ */
+#ifndef Z_LINK_LORA
+#define Z_LINK_LORA 1
+#endif
+
+/**
  * Enable Serial links.
  */
 #ifndef Z_LINK_SERIAL
@@ -246,7 +253,7 @@
  * Enable Multicast Transport.
  */
 #ifndef Z_MULTICAST_TRANSPORT
-#if Z_SCOUTING_UDP == 0 && Z_LINK_BLUETOOTH == 0 && Z_LINK_UDP_MULTICAST == 0
+#if Z_SCOUTING_UDP == 0 && Z_LINK_BLUETOOTH == 0 && Z_LINK_LORA == 0 && Z_LINK_UDP_MULTICAST == 0
 #define Z_MULTICAST_TRANSPORT 0
 #else
 #define Z_MULTICAST_TRANSPORT 1

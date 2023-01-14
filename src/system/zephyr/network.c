@@ -522,6 +522,10 @@ size_t _z_send_udp_multicast(_z_sys_net_socket_t sock, const uint8_t *ptr, size_
 #error "Bluetooth not supported yet on Zephyr port of Zenoh-Pico"
 #endif
 
+#if Z_LINK_LORA == 1
+#error "LoRa not supported yet on Zephyr port of Zenoh-Pico"
+#endif
+
 #if Z_LINK_SERIAL == 1
 #error "Serial not supported yet on Zephyr port of Zenoh-Pico"
 #endif

@@ -29,6 +29,9 @@
 #if Z_LINK_BLUETOOTH == 1
 #include "zenoh-pico/link/config/bt.h"
 #endif
+#if Z_LINK_LORA == 1
+#include "zenoh-pico/link/config/lora.h"
+#endif
 #if Z_LINK_SERIAL == 1
 #include "zenoh-pico/link/config/serial.h"
 #endif
@@ -302,6 +305,11 @@ _z_str_intmap_result_t _z_endpoint_config_from_str(const char *str, const char *
             res = _z_bt_config_from_str(p_start);
         } else
 #endif
+#if Z_LINK_LORA == 1
+            if (_z_str_eq(proto, LORA_SCHEMA) == true) {
+            res = _z_lora_config_from_str(p_start);
+        } else
+#endif
 #if Z_LINK_SERIAL == 1
             if (_z_str_eq(proto, SERIAL_SCHEMA) == true) {
             res = _z_serial_config_from_str(p_start);
@@ -336,6 +344,11 @@ size_t _z_endpoint_config_strlen(const _z_str_intmap_t *s, const char *proto) {
         len = _z_bt_config_strlen(s);
     } else
 #endif
+#if Z_LINK_LORA == 1
+        if (_z_str_eq(proto, LORA_SCHEMA) == true) {
+        len = _z_lora_config_strlen(s);
+    } else
+#endif
 #if Z_LINK_SERIAL == 1
         if (_z_str_eq(proto, SERIAL_SCHEMA) == true) {
         len = _z_serial_config_strlen(s);
@@ -365,6 +378,11 @@ char *_z_endpoint_config_to_str(const _z_str_intmap_t *s, const char *proto) {
 #if Z_LINK_BLUETOOTH == 1
         if (_z_str_eq(proto, BT_SCHEMA) == true) {
         res = _z_bt_config_to_str(s);
+    } else
+#endif
+#if Z_LINK_LORA == 1
+        if (_z_str_eq(proto, LORA_SCHEMA) == true) {
+        res = _z_lora_config_to_str(s);
     } else
 #endif
 #if Z_LINK_SERIAL == 1

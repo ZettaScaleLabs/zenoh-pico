@@ -46,6 +46,11 @@ _z_link_p_result_t _z_open_link(const char *locator) {
         r._value = _z_new_link_bt(endpoint);
     } else
 #endif
+#if Z_LINK_LORA == 1
+        if (_z_str_eq(endpoint._locator._protocol, LORA_SCHEMA) == true) {
+        r._value = _z_new_link_lora(endpoint);
+    } else
+#endif
 #if Z_LINK_SERIAL == 1
         if (_z_str_eq(endpoint._locator._protocol, SERIAL_SCHEMA) == true) {
         r._value = _z_new_link_serial(endpoint);
@@ -86,6 +91,11 @@ _z_link_p_result_t _z_listen_link(const char *locator) {
 #if Z_LINK_BLUETOOTH == 1
         if (_z_str_eq(endpoint._locator._protocol, BT_SCHEMA) == true) {
         r._value = _z_new_link_bt(endpoint);
+    } else
+#endif
+#if Z_LINK_LORA == 1
+        if (_z_str_eq(endpoint._locator._protocol, LORA_SCHEMA) == true) {
+        r._value = _z_new_link_lora(endpoint);
     } else
 #endif
     {

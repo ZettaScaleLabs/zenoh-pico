@@ -38,9 +38,6 @@ typedef struct {
 #if Z_LINK_TCP == 1 || Z_LINK_UDP_MULTICAST == 1 || Z_LINK_UDP_UNICAST == 1
         int _fd;
 #endif
-#if Z_LINK_BLUETOOTH == 1
-        void *_bts;  // As pointer to cross the boundary between C and C++
-#endif
     };
 } _z_sys_net_socket_t;
 
