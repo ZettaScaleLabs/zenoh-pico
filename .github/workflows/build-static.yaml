@@ -26,7 +26,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macOS-latest, self-hosted-windows-2022, self-hosted-windows-latest]
+        job:
+        - {os: ubuntu-latest, runner: ubuntu-latest}
+        - {os: macOS-latest, runner: macOS-latest}
+        - {os: macos, runner: self-hosted}
     steps:
     - uses: actions/checkout@v2
     - name: Compile debug
