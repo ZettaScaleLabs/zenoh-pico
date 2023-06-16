@@ -22,7 +22,7 @@ on:
 jobs:
   build:
     name: Build on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
+    runs-on: ['${{ matrix.job.runner }}', '${{ matrix.job.os }}']
     strategy:
       fail-fast: false
       matrix:
