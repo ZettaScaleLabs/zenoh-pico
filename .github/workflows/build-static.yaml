@@ -27,13 +27,11 @@ jobs:
       fail-fast: false
       matrix:
         job:
-        - {os: ubuntu-latest, runner: ubuntu-latest}
-        - {os: macOS-latest, runner: macOS-latest}
         - {os: macos, runner: self-hosted}
     steps:
     - uses: actions/checkout@v2
     - name: Compile debug
-      run: make all
+      run: echo $PATH && make all
       env:
         BUILD_TYPE: Debug
         BUILD_SHARED_LIBS: OFF
