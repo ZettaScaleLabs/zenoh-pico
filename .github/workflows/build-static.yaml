@@ -28,6 +28,7 @@ jobs:
       matrix:
         job:
         - {os: macos, runner: self-hosted}
+        - {os: windows, runner: self-hosted}
     steps:
     - uses: actions/checkout@v2
     - name: Compile debug
