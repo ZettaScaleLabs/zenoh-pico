@@ -625,6 +625,7 @@ OWNED_FUNCTIONS_PTR(_z_publisher_t, publisher, _z_owner_noop_copy, _z_publisher_
 void z_put_options_default(z_put_options_t *options) {
     options->congestion_control = Z_CONGESTION_CONTROL_DEFAULT;
     options->priority = Z_PRIORITY_DEFAULT;
+    options->encoding = z_encoding_default();
 #if Z_FEATURE_ATTACHMENT == 1
     options->attachment = z_attachment_null();
 #endif
