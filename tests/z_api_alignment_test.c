@@ -57,8 +57,7 @@ void hello_handler(z_owned_hello_t *hello, void *arg) {
     (void)(arg);
     printf("%s\n", __func__);
     hellos++;
-    z_null(hello);
-    z_drop(hello);  // validate double-drop safety: caller drops hello if it's not dropped by the handler
+    z_drop(hello);
 }
 
 volatile unsigned int queries = 0;
