@@ -226,6 +226,31 @@ z_encoding_t z_encoding(z_encoding_prefix_t prefix, const char *suffix) {
 
 z_encoding_t z_encoding_default(void) { return z_encoding(Z_ENCODING_PREFIX_DEFAULT, NULL); }
 
+const z_loaned_bytes_t *z_value_payload(const z_loaned_value_t *value) { return &value->payload; }
+
+size_t z_bytes_len(const z_loaned_bytes_t *bytes) { return bytes->len; }
+
+int8_t z_bytes_decode_into_string(const z_loaned_bytes_t *bytes, z_owned_string_t *s) {
+    // Init owned string
+    z_string_null(s);
+    s->_val = (_z_string_t *)z_malloc(sizeof(_z_string_t));
+    if (s->_val == NULL) {
+        return _Z_ERR_SYSTEM_OUT_OF_MEMORY;
+    }
+    // Allocate string
+    s->_val->len = bytes->len + (size_t)1;  // bytes data + null terminator
+    char *str_val = (char *)z_malloc(s->_val->len * sizeof(char));
+    if (str_val == NULL) {
+        return _Z_ERR_SYSTEM_OUT_OF_MEMORY;
+    }
+    // Recopy data
+    s->_val->val = str_val;
+    memcpy(s->_val->val, bytes->start, bytes->len);
+    // Set null terminator
+    s->_val->val[bytes->len] = '\0';
+    return _Z_RES_OK;
+}
+
 int8_t z_bytes_encode_from_string(z_owned_bytes_t *buffer, const z_loaned_string_t *s) {
     // Init owned bytes
     z_bytes_null(buffer);
