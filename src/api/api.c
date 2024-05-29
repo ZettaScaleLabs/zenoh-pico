@@ -237,17 +237,8 @@ int8_t z_bytes_decode_into_string(const z_loaned_bytes_t *bytes, z_owned_string_
     if (s->_val == NULL) {
         return _Z_ERR_SYSTEM_OUT_OF_MEMORY;
     }
-    // Allocate string
-    s->_val->len = bytes->len + (size_t)1;  // bytes data + null terminator
-    char *str_val = (char *)z_malloc(s->_val->len * sizeof(char));
-    if (str_val == NULL) {
-        return _Z_ERR_SYSTEM_OUT_OF_MEMORY;
-    }
-    // Recopy data
-    s->_val->val = str_val;
-    memcpy(s->_val->val, bytes->start, bytes->len);
-    // Set null terminator
-    s->_val->val[bytes->len] = '\0';
+    // Convert bytes to string
+    *s->_val = _z_string_from_bytes(bytes);
     return _Z_RES_OK;
 }
 
