@@ -30,3 +30,14 @@ void _z_encoding_clear(_z_encoding_t *encoding) { _z_bytes_clear(&encoding->sche
 _Bool _z_encoding_check(const _z_encoding_t *encoding) {
     return ((encoding->id != Z_ENCODING_ID_DEFAULT) || _z_bytes_check(encoding->schema));
 }
+
+void _z_encoding_copy(_z_encoding_t *dst, const _z_encoding_t *src) {
+    dst->id = src->id;
+    _z_bytes_copy(&dst->schema, &src->schema);
+}
+
+void _z_encoding_move(_z_encoding_t *dst, _z_encoding_t *src) {
+    dst->id = src->id;
+    src->id = Z_ENCODING_ID_DEFAULT;
+    _z_bytes_move(&dst->schema, &src->schema);
+}
