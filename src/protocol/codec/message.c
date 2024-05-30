@@ -555,7 +555,7 @@ int8_t _z_err_encode(_z_wbuf_t *wbf, const _z_msg_err_t *err) {
     uint8_t header = _Z_MID_Z_ERR;
 
     // Encode header
-    _Bool has_encoding = err->encoding.id != Z_ENCODING_ID_BYTES;
+    _Bool has_encoding = _z_encoding_check(&err->encoding);
     if (has_encoding) {
         _Z_SET_FLAG(header, _Z_FLAG_Z_E_E);
     }
