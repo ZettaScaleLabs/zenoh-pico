@@ -190,11 +190,11 @@ _LOANED_TYPE(_z_query_rc_t, query)
  * Represents the encoding of a payload, in a MIME-like format.
  *
  * Members:
- *   z_encoding_prefix_t prefix: The integer prefix of this encoding.
+ *   z_encoding_id_t prefix: The integer prefix of this encoding.
  *   z_loaned_bytes_t* suffix: The suffix of this encoding. It MUST be a valid UTF-8 string.
  */
-// TODO(sashacmc): z_encoding_t
-typedef _z_encoding_t z_encoding_t;
+_OWNED_TYPE_PTR(_z_encoding_t, encoding)
+_LOANED_TYPE(_z_encoding_t, encoding)
 
 /*
  * Represents timestamp value in Zenoh
@@ -205,7 +205,7 @@ typedef _z_timestamp_t z_timestamp_t;
  * Represents a Zenoh value.
  *
  * Members:
- *   z_encoding_t encoding: The encoding of the `payload`.
+ *   z_loaned_encoding_t encoding: The encoding of the `payload`.
  *   z_loaned_bytes_t* payload: The payload of this zenoh value.
  */
 
@@ -263,11 +263,11 @@ typedef struct {
  * sent via :c:func:`z_query_reply`.
  *
  * Members:
- *   z_encoding_t encoding: The encoding of the payload.
+ *   z_loaned_encoding_t encoding: The encoding of the payload.
  *   z_attachment_t attachment: an attachment to the response.
  */
 typedef struct {
-    z_encoding_t encoding;
+    z_loaned_encoding_t encoding;
     z_attachment_t attachment;
 } z_query_reply_options_t;
 
@@ -276,12 +276,12 @@ typedef struct {
  * whenever issued via :c:func:`z_put`.
  *
  * Members:
- *   z_encoding_t encoding: The encoding of the payload.
+ *   z_loaned_encoding_t encoding: The encoding of the payload.
  *   z_congestion_control_t congestion_control: The congestion control to apply when routing this message.
  *   z_priority_t priority: The priority of this message when routed.
  */
 typedef struct {
-    z_encoding_t encoding;
+    z_loaned_encoding_t encoding;
     z_congestion_control_t congestion_control;
     z_priority_t priority;
 #if Z_FEATURE_ATTACHMENT == 1
@@ -307,10 +307,10 @@ typedef struct {
  * whenever issued via :c:func:`z_publisher_put`.
  *
  * Members:
- *   z_encoding_t encoding: The encoding of the payload.
+ *   z_loaned_encoding_t encoding: The encoding of the payload.
  */
 typedef struct {
-    z_encoding_t encoding;
+    z_loaned_encoding_t encoding;
 #if Z_FEATURE_ATTACHMENT == 1
     z_attachment_t attachment;
 #endif
@@ -332,11 +332,11 @@ typedef struct {
  *   z_query_target_t target: The queryables that should be targeted by this get.
  *   z_query_consolidation_t consolidation: The replies consolidation strategy to apply on replies.
  *   z_owned_bytes_t payload: The payload to include in the query.
- *   z_encoding_t encoding: Payload encoding.
+ *   z_loaned_encoding_t encoding: Payload encoding.
  */
 typedef struct {
     z_owned_bytes_t *payload;
-    z_encoding_t encoding;
+    z_loaned_encoding_t encoding;
     z_query_consolidation_t consolidation;
     z_query_target_t target;
     uint32_t timeout_ms;
@@ -427,7 +427,7 @@ static inline z_qos_t z_qos_default(void) { return _Z_N_QOS_DEFAULT; }
  * Members:
  *   z_keyexpr_t keyexpr: The keyexpr of this data sample.
  *   z_loaned_bytes_t* payload: The value of this data sample.
- *   z_encoding_t encoding: The encoding of the value of this data sample.
+ *   z_loaned_encoding_t encoding: The encoding of the value of this data sample.
  *   z_sample_kind_t kind: The kind of this data sample (PUT or DELETE).
  *   z_timestamp_t timestamp: The timestamp of this data sample.
  *   z_qos_t qos: Quality of service settings used to deliver this sample.

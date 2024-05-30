@@ -394,24 +394,48 @@ const char *zp_scouting_config_get(const z_loaned_scouting_config_t *config, uin
 int8_t zp_scouting_config_insert(z_loaned_scouting_config_t *config, uint8_t key, const char *value);
 
 /**
- * Constructs a :c:type:`z_encoding_t`.
+ * Constructs a :c:type:`z_loaned_encoding_t`.
  *
  * Parameters:
- *   prefix: A known :c:type:`z_encoding_prefix_t`.
- *   suffix: A custom suffix to be appended to the prefix.
+ *   encoding: a reference to an uninitialized :c:type:`z_owned_encoding_t`
+ *   id: A known :c:type:`z_encoding_id_t`.
+ *   schema: A custom schema string value.
  *
  * Returns:
- *   Returns the constructed :c:type:`z_encoding_t`.
+ *   Returns ``0`` if construction is successful, or a ``negative value`` otherwise.
  */
-z_encoding_t z_encoding(z_encoding_prefix_t prefix, const char *suffix);
+int8_t zp_encoding_make(z_owned_encoding_t *encoding, z_encoding_id_t id, const char *schema);
 
 /**
  * Constructs a default encoding.
  *
+ * Parameters:
+ *   encoding: a reference to an uninitialized :c:type:`z_owned_encoding_t`
+ *
  * Returns:
- *   Returns the constructed :c:type:`z_encoding_t`.
+ *   Returns ``0`` if construction is successful, or a ``negative value`` otherwise.
  */
-z_encoding_t z_encoding_default(void);
+int8_t zp_encoding_default(z_owned_encoding_t *encoding);
+
+/**
+ * Returns ``true`` if encoding is in non-default state, ``false`` otherwise.
+ */
+_Bool z_encoding_check(const z_owned_encoding_t *encoding);
+
+/**
+ * Frees the memory of the encoding.
+ */
+void z_encoding_drop(z_owned_encoding_t *encoding);
+
+/**
+ * Returns a loaned `z_loaned_encoding_t`.
+ */
+const z_loaned_encoding_t *z_encoding_loan(const z_owned_encoding_t *encoding);
+
+/**
+ * Constructs a default `z_owned_encoding_t`.
+ */
+void z_encoding_null(z_owned_encoding_t *encoding);
 
 /**
  * Returns value payload.
@@ -963,9 +987,9 @@ z_timestamp_t z_sample_timestamp(const z_loaned_sample_t *sample);
  *   sample: Pointer to the sample to get the encoding from.
  *
  * Returns:
- *   Returns the encoding wrapped as a :c:type:`z_encoding_t`.
+ *   Returns the encoding wrapped as a :c:type:`z_loaned_encoding_t`.
  */
-z_encoding_t z_sample_encoding(const z_loaned_sample_t *sample);
+z_loaned_encoding_t z_sample_encoding(const z_loaned_sample_t *sample);
 
 /**
  * Get a sample's kind by aliasing it.

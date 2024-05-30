@@ -219,12 +219,44 @@ int8_t zp_scouting_config_insert(z_loaned_scouting_config_t *sc, uint8_t key, co
     return _zp_config_insert(sc, key, value);
 }
 
-z_encoding_t z_encoding(z_encoding_prefix_t prefix, const char *suffix) {
-    return (_z_encoding_t){
-        .id = prefix, .schema = _z_bytes_wrap((const uint8_t *)suffix, (suffix == NULL) ? (size_t)0 : strlen(suffix))};
+// TODO: STRING BASED ENCODING FEATURE
+int8_t zp_encoding_make(z_owned_encoding_t *encoding, z_encoding_id_t id, const char *schema) {
+    // Init encoding
+    encoding->_val = (_z_encoding_t *)z_malloc(sizeof(_z_encoding_t));
+    if (encoding->_val == NULL) {
+        return _Z_ERR_SYSTEM_OUT_OF_MEMORY;
+    }
+    // Recopy string
+    if (schema != NULL) {
+        encoding->_val->schema = _z_bytes_make(strlen(schema));
+        if (encoding->_val->schema.start == NULL) {
+            return _Z_ERR_SYSTEM_OUT_OF_MEMORY;
+        }
+        strcpy((char *)encoding->_val->schema.start, schema);
+    } else {
+        encoding->_val->schema = _z_bytes_empty();
+    }
+    return _Z_RES_OK;
 }
 
-z_encoding_t z_encoding_default(void) { return z_encoding(Z_ENCODING_PREFIX_DEFAULT, NULL); }
+int8_t zp_encoding_default(z_owned_encoding_t *encoding) {
+    return zp_encoding_make(encoding, Z_ENCODING_ID_DEFAULT, NULL);
+}
+
+_Bool z_encoding_check(const z_owned_encoding_t *encoding) {
+    return ((encoding->_val->id != Z_ENCODING_ID_DEFAULT) || !_z_bytes_is_empty(&encoding->_val->schema));
+}
+
+void z_encoding_drop(z_owned_encoding_t *encoding) {
+    if (!_z_bytes_is_empty(&encoding->_val->schema)) {
+        _z_bytes_clear(&encoding->_val->schema);
+    }
+    z_free(encoding->_val);
+}
+
+const z_loaned_encoding_t *z_encoding_loan(const z_owned_encoding_t *encoding) { return encoding->_val; }
+
+void z_encoding_null(z_owned_encoding_t *encoding) { zp_encoding_default(encoding); }
 
 const z_loaned_bytes_t *z_value_payload(const z_loaned_value_t *value) { return &value->payload; }
 
@@ -587,7 +619,7 @@ const z_loaned_keyexpr_t *z_sample_keyexpr(const z_loaned_sample_t *sample) { re
 z_sample_kind_t z_sample_kind(const z_loaned_sample_t *sample) { return _Z_RC_IN_VAL(sample).kind; }
 const z_loaned_bytes_t *z_sample_payload(const z_loaned_sample_t *sample) { return &_Z_RC_IN_VAL(sample).payload; }
 z_timestamp_t z_sample_timestamp(const z_loaned_sample_t *sample) { return _Z_RC_IN_VAL(sample).timestamp; }
-z_encoding_t z_sample_encoding(const z_loaned_sample_t *sample) { return _Z_RC_IN_VAL(sample).encoding; }
+z_loaned_encoding_t z_sample_encoding(const z_loaned_sample_t *sample) { return _Z_RC_IN_VAL(sample).encoding; }
 z_qos_t z_sample_qos(const z_loaned_sample_t *sample) { return _Z_RC_IN_VAL(sample).qos; }
 #if Z_FEATURE_ATTACHMENT == 1
 z_attachment_t z_sample_attachment(const z_loaned_sample_t *sample) { return _Z_RC_IN_VAL(sample).attachment; }
