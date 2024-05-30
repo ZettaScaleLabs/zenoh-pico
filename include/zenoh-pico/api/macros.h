@@ -128,7 +128,8 @@
                   z_owned_bytes_t : z_bytes_check,                     \
                   z_owned_sample_t : z_sample_check,                   \
                   z_owned_query_t : z_query_check,                     \
-                  z_owned_encoding_t : z_encoding_check                \
+                  z_owned_encoding_t : z_encoding_check,               \
+                  z_loaned_encoding_t : z_encoding_loan_check          \
             )(&x)
 
 /**
