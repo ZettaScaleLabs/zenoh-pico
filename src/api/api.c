@@ -226,9 +226,9 @@ int8_t zp_encoding_make(z_owned_encoding_t *encoding, z_encoding_id_t id, const 
     if (encoding->_val == NULL) {
         return _Z_ERR_SYSTEM_OUT_OF_MEMORY;
     }
-    // Recopy string
+    // Clone schema
     if (schema != NULL) {
-        encoding->_val->schema = _z_bytes_make(strlen(schema));
+        encoding->_val->schema = _z_bytes_make(strlen(schema) + 1);
         if (encoding->_val->schema.start == NULL) {
             return _Z_ERR_SYSTEM_OUT_OF_MEMORY;
         }
