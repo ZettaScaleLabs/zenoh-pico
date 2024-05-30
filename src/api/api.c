@@ -243,9 +243,7 @@ int8_t zp_encoding_default(z_owned_encoding_t *encoding) {
     return zp_encoding_make(encoding, Z_ENCODING_ID_DEFAULT, NULL);
 }
 
-_Bool z_encoding_loan_check(const z_loaned_encoding_t *encoding) {
-    return ((encoding->id != Z_ENCODING_ID_DEFAULT) || !_z_bytes_is_empty(&encoding->schema));
-}
+_Bool z_encoding_loan_check(const z_loaned_encoding_t *encoding) { return _z_encoding_check(encoding); }
 
 _Bool z_encoding_check(const z_owned_encoding_t *encoding) { return z_encoding_loan_check(encoding->_val); }
 

@@ -52,7 +52,7 @@ void _z_sample_move(_z_sample_t *dst, _z_sample_t *src) {
 void _z_sample_clear(_z_sample_t *sample) {
     _z_keyexpr_clear(&sample->keyexpr);
     _z_bytes_clear(&sample->payload);
-    _z_bytes_clear(&sample->encoding.schema);  // FIXME: call the z_encoding_clear
+    _z_encoding_clear(&sample->encoding);
     _z_timestamp_clear(&sample->timestamp);
 #if Z_FEATURE_ATTACHMENT == 1
     _z_attachment_drop(&sample->attachment);

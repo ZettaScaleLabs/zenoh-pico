@@ -27,5 +27,7 @@ typedef struct _z_encoding_t {
 
 _z_encoding_t _z_encoding_make(z_encoding_id_t id, const char *schema);
 _z_encoding_t _z_encoding_null(void);
+void _z_encoding_clear(_z_encoding_t *encoding);
+_Bool _z_encoding_check(const _z_encoding_t *encoding);
 
 #endif /* ZENOH_PICO_ENCODING_NETAPI_H */

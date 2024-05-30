@@ -279,8 +279,7 @@ int8_t _z_push_body_encode(_z_wbuf_t *wbf, const _z_push_body_t *pshb) {
         if (has_timestamp) {
             header |= _Z_FLAG_Z_P_T;
         }
-        has_encoding = pshb->_body._put._encoding.id != Z_ENCODING_ID_BYTES ||
-                       !_z_bytes_is_empty(&pshb->_body._put._encoding.schema);
+        has_encoding = _z_encoding_check(&pshb->_body._put._encoding);
         if (has_encoding) {
             header |= _Z_FLAG_Z_P_E;
         }
