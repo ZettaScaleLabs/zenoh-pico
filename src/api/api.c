@@ -610,7 +610,7 @@ OWNED_FUNCTIONS_PTR(_z_publisher_t, publisher, _z_owner_noop_copy, _z_publisher_
 void z_put_options_default(z_put_options_t *options) {
     options->congestion_control = Z_CONGESTION_CONTROL_DEFAULT;
     options->priority = Z_PRIORITY_DEFAULT;
-    options->encoding = z_encoding_default();
+    options->encoding = _z_encoding_null();
 #if Z_FEATURE_ATTACHMENT == 1
     options->attachment = z_attachment_null();
 #endif
@@ -667,7 +667,7 @@ int8_t z_delete(const z_loaned_session_t *zs, const z_loaned_keyexpr_t *keyexpr,
         opt.congestion_control = options->congestion_control;
         opt.priority = options->priority;
     }
-    ret = _z_write(&_Z_RC_IN_VAL(zs), *keyexpr, NULL, 0, z_encoding_default(), Z_SAMPLE_KIND_DELETE,
+    ret = _z_write(&_Z_RC_IN_VAL(zs), *keyexpr, NULL, 0, _z_encoding_null(), Z_SAMPLE_KIND_DELETE,
                    opt.congestion_control, opt.priority
 #if Z_FEATURE_ATTACHMENT == 1
                    ,
@@ -728,7 +728,7 @@ int8_t z_declare_publisher(z_owned_publisher_t *pub, const z_loaned_session_t *z
 int8_t z_undeclare_publisher(z_owned_publisher_t *pub) { return _z_publisher_drop(&pub->_val); }
 
 void z_publisher_put_options_default(z_publisher_put_options_t *options) {
-    options->encoding = z_encoding_default();
+    options->encoding = _z_encoding_null();
 #if Z_FEATURE_ATTACHMENT == 1
     options->attachment = z_attachment_null();
 #endif
@@ -772,7 +772,7 @@ int8_t z_publisher_put(const z_loaned_publisher_t *pub, const uint8_t *payload, 
 
 int8_t z_publisher_delete(const z_loaned_publisher_t *pub, const z_publisher_delete_options_t *options) {
     (void)(options);
-    return _z_write(&pub->_zn.in->val, pub->_key, NULL, 0, z_encoding_default(), Z_SAMPLE_KIND_DELETE,
+    return _z_write(&pub->_zn.in->val, pub->_key, NULL, 0, _z_encoding_null(), Z_SAMPLE_KIND_DELETE,
                     pub->_congestion_control, pub->_priority
 #if Z_FEATURE_ATTACHMENT == 1
                     ,
@@ -796,7 +796,7 @@ OWNED_FUNCTIONS_RC(reply)
 void z_get_options_default(z_get_options_t *options) {
     options->target = z_query_target_default();
     options->consolidation = z_query_consolidation_default();
-    options->encoding = z_encoding_default();
+    options->encoding = _z_encoding_null();
     options->payload = NULL;
 #if Z_FEATURE_ATTACHMENT == 1
     options->attachment = z_attachment_null();
@@ -908,7 +908,7 @@ int8_t z_declare_queryable(z_owned_queryable_t *queryable, const z_loaned_sessio
 
 int8_t z_undeclare_queryable(z_owned_queryable_t *queryable) { return _z_queryable_drop(&queryable->_val); }
 
-void z_query_reply_options_default(z_query_reply_options_t *options) { options->encoding = z_encoding_default(); }
+void z_query_reply_options_default(z_query_reply_options_t *options) { options->encoding = _z_encoding_null(); }
 
 int8_t z_query_reply(const z_loaned_query_t *query, const z_loaned_keyexpr_t *keyexpr, z_owned_bytes_t *payload,
                      const z_query_reply_options_t *options) {
