@@ -57,6 +57,10 @@ int main(int argc, char **argv) {
         return -1;
     }
 
+    // Create encoding
+    z_owned_encoding_t encoding;
+    zp_encoding_make(&encoding, Z_ENCODING_ID_TEXT_PLAIN, NULL);
+
     printf("Press CTRL-C to quit...\n");
     char *buf = (char *)malloc(256);
     for (int idx = 0; 1; ++idx) {
@@ -66,18 +70,16 @@ int main(int argc, char **argv) {
 
         z_publisher_put_options_t options;
         z_publisher_put_options_default(&options);
-        options.encoding = z_encoding(Z_ENCODING_PREFIX_TEXT_PLAIN, NULL);
+        options.encoding = *z_loan(encoding);
         z_publisher_put(z_loan(pub), (const uint8_t *)buf, strlen(buf), &options);
     }
 
+    // Clean-up
     z_undeclare_publisher(z_move(pub));
-
-    // Stop read and lease tasks for zenoh-pico
     zp_stop_read_task(z_loan_mut(s));
     zp_stop_lease_task(z_loan_mut(s));
-
     z_close(z_move(s));
-
+    z_drop(&encoding);
     free(buf);
     return 0;
 }

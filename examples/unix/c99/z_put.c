@@ -93,10 +93,14 @@ int main(int argc, char **argv) {
         return -1;
     }
 
+    // Create encoding
+    z_owned_encoding_t encoding;
+    zp_encoding_make(&encoding, Z_ENCODING_ID_TEXT_PLAIN, NULL);
+
     printf("Putting Data ('%s': '%s')...\n", keyexpr, value);
     z_put_options_t options;
     z_put_options_default(&options);
-    options.encoding = z_encoding(Z_ENCODING_PREFIX_TEXT_PLAIN, NULL);
+    options.encoding = *z_encoding_loan(&encoding);
     if (z_put(z_session_loan(&s), z_keyexpr_loan(&ke), (const uint8_t *)value, strlen(value), &options) < 0) {
         printf("Oh no! Put has failed...\n");
     }
@@ -106,6 +110,7 @@ int main(int argc, char **argv) {
     zp_stop_read_task(z_session_loan_mut(&s));
     zp_stop_lease_task(z_session_loan_mut(&s));
     z_close(z_session_move(&s));
+    z_encoding_drop(&encoding);
     return 0;
 }
 #else

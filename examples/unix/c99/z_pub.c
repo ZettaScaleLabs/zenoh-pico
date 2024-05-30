@@ -95,6 +95,10 @@ int main(int argc, char **argv) {
         return -1;
     }
 
+    // Create encoding
+    z_owned_encoding_t encoding;
+    zp_encoding_make(&encoding, Z_ENCODING_ID_TEXT_PLAIN, NULL);
+
     printf("Press CTRL-C to quit...\n");
     char *buf = (char *)malloc(256);
     for (int idx = 0; idx < n; ++idx) {
@@ -104,7 +108,7 @@ int main(int argc, char **argv) {
 
         z_publisher_put_options_t options;
         z_publisher_put_options_default(&options);
-        options.encoding = z_encoding(Z_ENCODING_PREFIX_TEXT_PLAIN, NULL);
+        options.encoding = *z_encoding_loan(&encoding);
         z_publisher_put(z_publisher_loan(&pub), (const uint8_t *)buf, strlen(buf), &options);
     }
     // Clean up
@@ -112,6 +116,7 @@ int main(int argc, char **argv) {
     zp_stop_read_task(z_session_loan_mut(&s));
     zp_stop_lease_task(z_session_loan_mut(&s));
     z_close(z_session_move(&s));
+    z_encoding_drop(&encoding);
     return 0;
 }
 #else
