@@ -438,8 +438,11 @@ const z_loaned_encoding_t *z_encoding_loan(const z_owned_encoding_t *encoding);
  *
  * Parameters:
  *   encoding: a reference to an uninitialized :c:type:`z_owned_encoding_t`
+ *
+ * Returns:
+ *   Returns ``0`` if construction is successful, or a ``negative value`` otherwise.
  */
-void z_encoding_null(z_owned_encoding_t *encoding);
+int8_t z_encoding_null(z_owned_encoding_t *encoding);
 
 /**
  * Returns value payload.
@@ -996,9 +999,9 @@ z_timestamp_t z_sample_timestamp(const z_loaned_sample_t *sample);
  *   sample: Pointer to the sample to get the encoding from.
  *
  * Returns:
- *   Returns the encoding wrapped as a :c:type:`z_loaned_encoding_t`.
+ *   Returns the encoding wrapped as a :c:type:`z_loaned_encoding_t*`.
  */
-z_loaned_encoding_t z_sample_encoding(const z_loaned_sample_t *sample);
+const z_loaned_encoding_t *z_sample_encoding(const z_loaned_sample_t *sample);
 
 /**
  * Get a sample's kind by aliasing it.

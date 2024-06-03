@@ -263,11 +263,11 @@ typedef struct {
  * sent via :c:func:`z_query_reply`.
  *
  * Members:
- *   z_loaned_encoding_t encoding: The encoding of the payload.
+ *   z_owned_encoding_t *encoding: The encoding of the payload.
  *   z_attachment_t attachment: an attachment to the response.
  */
 typedef struct {
-    z_loaned_encoding_t encoding;
+    z_owned_encoding_t *encoding;
     z_attachment_t attachment;
 } z_query_reply_options_t;
 
@@ -276,12 +276,12 @@ typedef struct {
  * whenever issued via :c:func:`z_put`.
  *
  * Members:
- *   z_loaned_encoding_t encoding: The encoding of the payload.
+ *   z_owned_encoding_t *encoding: The encoding of the payload.
  *   z_congestion_control_t congestion_control: The congestion control to apply when routing this message.
  *   z_priority_t priority: The priority of this message when routed.
  */
 typedef struct {
-    z_loaned_encoding_t encoding;
+    z_owned_encoding_t *encoding;
     z_congestion_control_t congestion_control;
     z_priority_t priority;
 #if Z_FEATURE_ATTACHMENT == 1
@@ -307,10 +307,10 @@ typedef struct {
  * whenever issued via :c:func:`z_publisher_put`.
  *
  * Members:
- *   z_loaned_encoding_t encoding: The encoding of the payload.
+ *   z_owned_encoding_t *encoding: The encoding of the payload.
  */
 typedef struct {
-    z_loaned_encoding_t encoding;
+    z_owned_encoding_t *encoding;
 #if Z_FEATURE_ATTACHMENT == 1
     z_attachment_t attachment;
 #endif
@@ -332,11 +332,11 @@ typedef struct {
  *   z_query_target_t target: The queryables that should be targeted by this get.
  *   z_query_consolidation_t consolidation: The replies consolidation strategy to apply on replies.
  *   z_owned_bytes_t payload: The payload to include in the query.
- *   z_loaned_encoding_t encoding: Payload encoding.
+ *   z_owned_encoding_t *encoding: Payload encoding.
  */
 typedef struct {
     z_owned_bytes_t *payload;
-    z_loaned_encoding_t encoding;
+    z_owned_encoding_t *encoding;
     z_query_consolidation_t consolidation;
     z_query_target_t target;
     uint32_t timeout_ms;
