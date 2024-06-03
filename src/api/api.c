@@ -255,9 +255,7 @@ int8_t zp_encoding_make(z_owned_encoding_t *encoding, z_encoding_id_t id, const 
 
 int8_t z_encoding_null(z_owned_encoding_t *encoding) { zp_encoding_make(encoding, Z_ENCODING_ID_DEFAULT, NULL); }
 
-_Bool z_encoding_loan_check(const z_loaned_encoding_t *encoding) { return _z_encoding_check(encoding); }
-
-_Bool z_encoding_check(const z_owned_encoding_t *encoding) { return z_encoding_loan_check(encoding->_val); }
+_Bool z_encoding_check(const z_owned_encoding_t *encoding) { return _z_encoding_check(encoding->_val); }
 
 void z_encoding_drop(z_owned_encoding_t *encoding) {
     if (encoding == &_default_owned_encoding) {
