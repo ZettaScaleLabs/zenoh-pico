@@ -20,7 +20,7 @@ _z_sample_t _z_sample_null(void) {
     _z_sample_t s = {
         .keyexpr = _z_keyexpr_null(),
         .payload = _z_bytes_empty(),
-        .encoding = _z_encoding_null(),  // FIXME: call _z_encoding_null
+        .encoding = _z_encoding_null(),
         .timestamp = _z_timestamp_null(),
         .kind = 0,
         .qos = {0},
@@ -91,7 +91,7 @@ _z_sample_t _z_sample_create(const _z_keyexpr_t *key, const _z_bytes_t *payload,
     _z_sample_t s = _z_sample_null();
     _z_keyexpr_copy(&s.keyexpr, key);
     _z_bytes_copy(&s.payload, payload);
-    s.encoding = encoding;  // FIXME: call z_encoding_move or copy
+    _z_encoding_copy(&s.encoding, &encoding);
     s.kind = kind;
     s.timestamp = timestamp;
     s.qos = qos;
