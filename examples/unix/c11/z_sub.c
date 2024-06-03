@@ -46,10 +46,6 @@ void data_handler(const z_loaned_sample_t *sample, void *ctx) {
         z_attachment_iterate(attachment, attachment_handler, NULL);
     }
 #endif
-    const z_loaned_encoding_t *encoding = z_sample_encoding(sample);
-    printf("     with encoding {id: %d, schema: '%.*s'}\n", encoding->id, (int)encoding->schema.len,
-           encoding->schema.start);
-
     z_drop(z_move(keystr));
     msg_nb++;
 }

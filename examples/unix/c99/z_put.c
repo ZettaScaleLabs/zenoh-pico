@@ -100,7 +100,7 @@ int main(int argc, char **argv) {
     printf("Putting Data ('%s': '%s')...\n", keyexpr, value);
     z_put_options_t options;
     z_put_options_default(&options);
-    options.encoding = z_encoding_move(encoding);
+    options.encoding = z_encoding_move(&encoding);
     if (z_put(z_session_loan(&s), z_keyexpr_loan(&ke), (const uint8_t *)value, strlen(value), &options) < 0) {
         printf("Oh no! Put has failed...\n");
     }

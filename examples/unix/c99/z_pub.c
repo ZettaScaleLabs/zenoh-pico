@@ -107,7 +107,7 @@ int main(int argc, char **argv) {
         zp_encoding_make(&encoding, Z_ENCODING_ID_TEXT_PLAIN, NULL);
         z_publisher_put_options_t options;
         z_publisher_put_options_default(&options);
-        options.encoding = z_encoding_move(encoding);
+        options.encoding = z_encoding_move(&encoding);
 
         z_publisher_put(z_publisher_loan(&pub), (const uint8_t *)buf, strlen(buf), &options);
     }
