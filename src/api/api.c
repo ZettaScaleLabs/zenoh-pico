@@ -220,19 +220,6 @@ int8_t zp_scouting_config_insert(z_loaned_scouting_config_t *sc, uint8_t key, co
 }
 
 // TODO: STRING BASED ENCODING FEATURE
-static _z_encoding_t _default_encoding = {
-    .id = Z_ENCODING_ID_DEFAULT,
-    .schema =
-        {
-            .len = 0,
-            .start = NULL,
-            ._is_alloc = false,
-        },
-};
-static z_owned_encoding_t _default_owned_encoding = {
-    ._val = &_default_encoding,
-};
-
 int8_t zp_encoding_make(z_owned_encoding_t *encoding, z_encoding_id_t id, const char *schema) {
     // Init encoding
     encoding->_val = (_z_encoding_t *)z_malloc(sizeof(_z_encoding_t));
@@ -249,8 +236,8 @@ int8_t z_encoding_null(z_owned_encoding_t *encoding) { return zp_encoding_make(e
 _Bool z_encoding_check(const z_owned_encoding_t *encoding) { return _z_encoding_check(encoding->_val); }
 
 void z_encoding_drop(z_owned_encoding_t *encoding) {
-    if (encoding == &_default_owned_encoding) {
-        return;  // No need to drop default value
+    if (encoding == NULL) {
+        return;
     }
     if (!_z_bytes_is_empty(&encoding->_val->schema)) {
         _z_bytes_clear(&encoding->_val->schema);
@@ -259,6 +246,17 @@ void z_encoding_drop(z_owned_encoding_t *encoding) {
 }
 
 const z_loaned_encoding_t *z_encoding_loan(const z_owned_encoding_t *encoding) { return encoding->_val; }
+
+// Convert a user owned encoding to an internal encoding, return default encoding if value invalid
+static _z_encoding_t _z_encoding_from_owned(const z_owned_encoding_t *encoding) {
+    if (encoding == NULL) {
+        return _z_encoding_null();
+    }
+    if (encoding->_val == NULL) {
+        return _z_encoding_null();
+    }
+    return *encoding->_val;
+}
 
 const z_loaned_bytes_t *z_value_payload(const z_loaned_value_t *value) { return &value->payload; }
 
@@ -644,7 +642,7 @@ OWNED_FUNCTIONS_PTR(_z_publisher_t, publisher, _z_owner_noop_copy, _z_publisher_
 void z_put_options_default(z_put_options_t *options) {
     options->congestion_control = Z_CONGESTION_CONTROL_DEFAULT;
     options->priority = Z_PRIORITY_DEFAULT;
-    options->encoding = &_default_owned_encoding;
+    options->encoding = NULL;
 #if Z_FEATURE_ATTACHMENT == 1
     options->attachment = z_attachment_null();
 #endif
@@ -669,8 +667,8 @@ int8_t z_put(const z_loaned_session_t *zs, const z_loaned_keyexpr_t *keyexpr, co
         opt.attachment = options->attachment;
 #endif
     }
-    ret = _z_write(&_Z_RC_IN_VAL(zs), *keyexpr, (const uint8_t *)payload, payload_len, *opt.encoding->_val,
-                   Z_SAMPLE_KIND_PUT, opt.congestion_control, opt.priority
+    ret = _z_write(&_Z_RC_IN_VAL(zs), *keyexpr, (const uint8_t *)payload, payload_len,
+                   _z_encoding_from_owned(opt.encoding), Z_SAMPLE_KIND_PUT, opt.congestion_control, opt.priority
 #if Z_FEATURE_ATTACHMENT == 1
                    ,
                    opt.attachment
@@ -763,7 +761,7 @@ int8_t z_declare_publisher(z_owned_publisher_t *pub, const z_loaned_session_t *z
 int8_t z_undeclare_publisher(z_owned_publisher_t *pub) { return _z_publisher_drop(&pub->_val); }
 
 void z_publisher_put_options_default(z_publisher_put_options_t *options) {
-    options->encoding = &_default_owned_encoding;
+    options->encoding = NULL;
 #if Z_FEATURE_ATTACHMENT == 1
     options->attachment = z_attachment_null();
 #endif
@@ -786,8 +784,8 @@ int8_t z_publisher_put(const z_loaned_publisher_t *pub, const uint8_t *payload, 
     // Check if write filter is active before writing
     if (!_z_write_filter_active(pub)) {
         // Write value
-        ret = _z_write(&pub->_zn.in->val, pub->_key, payload, len, *opt.encoding->_val, Z_SAMPLE_KIND_PUT,
-                       pub->_congestion_control, pub->_priority
+        ret = _z_write(&pub->_zn.in->val, pub->_key, payload, len, _z_encoding_from_owned(opt.encoding),
+                       Z_SAMPLE_KIND_PUT, pub->_congestion_control, pub->_priority
 #if Z_FEATURE_ATTACHMENT == 1
                        ,
                        opt.attachment
@@ -834,7 +832,7 @@ OWNED_FUNCTIONS_RC(reply)
 void z_get_options_default(z_get_options_t *options) {
     options->target = z_query_target_default();
     options->consolidation = z_query_consolidation_default();
-    options->encoding = &_default_owned_encoding;
+    options->encoding = NULL;
     options->payload = NULL;
 #if Z_FEATURE_ATTACHMENT == 1
     options->attachment = z_attachment_null();
@@ -870,7 +868,8 @@ int8_t z_get(const z_loaned_session_t *zs, const z_loaned_keyexpr_t *keyexpr, co
         }
     }
     // Set value
-    _z_value_t value = {.payload = _z_bytes_from_owned_bytes(opt.payload), .encoding = *opt.encoding->_val};
+    _z_value_t value = {.payload = _z_bytes_from_owned_bytes(opt.payload),
+                        .encoding = _z_encoding_from_owned(opt.encoding)};
 
     ret = _z_query(&_Z_RC_IN_VAL(zs), *keyexpr, parameters, opt.target, opt.consolidation.mode, value, callback->call,
                    callback->drop, ctx, opt.timeout_ms
@@ -948,7 +947,7 @@ int8_t z_declare_queryable(z_owned_queryable_t *queryable, const z_loaned_sessio
 
 int8_t z_undeclare_queryable(z_owned_queryable_t *queryable) { return _z_queryable_drop(&queryable->_val); }
 
-void z_query_reply_options_default(z_query_reply_options_t *options) { options->encoding = &_default_owned_encoding; }
+void z_query_reply_options_default(z_query_reply_options_t *options) { options->encoding = NULL; }
 
 int8_t z_query_reply(const z_loaned_query_t *query, const z_loaned_keyexpr_t *keyexpr, z_owned_bytes_t *payload,
                      const z_query_reply_options_t *options) {
@@ -959,7 +958,8 @@ int8_t z_query_reply(const z_loaned_query_t *query, const z_loaned_keyexpr_t *ke
         opts = *options;
     }
     // Set value
-    _z_value_t value = {.payload = _z_bytes_from_owned_bytes(payload), .encoding = *opts.encoding->_val};
+    _z_value_t value = {.payload = _z_bytes_from_owned_bytes(payload),
+                        .encoding = _z_encoding_from_owned(opts.encoding)};
 
     int8_t ret = _z_send_reply(&query->in->val, *keyexpr, value, Z_SAMPLE_KIND_PUT, opts.attachment);
     if (payload != NULL) {
