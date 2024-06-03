@@ -108,7 +108,7 @@ int main(int argc, char **argv) {
 
         z_publisher_put_options_t options;
         z_publisher_put_options_default(&options);
-        options.encoding = *z_encoding_loan(&encoding);
+        options.encoding = &encoding;
         z_publisher_put(z_publisher_loan(&pub), (const uint8_t *)buf, strlen(buf), &options);
     }
     // Clean up
@@ -116,7 +116,6 @@ int main(int argc, char **argv) {
     zp_stop_read_task(z_session_loan_mut(&s));
     zp_stop_lease_task(z_session_loan_mut(&s));
     z_close(z_session_move(&s));
-    z_encoding_drop(&encoding);
     return 0;
 }
 #else

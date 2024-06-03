@@ -44,7 +44,7 @@ void query_handler(const z_loaned_query_t *query, void *ctx) {
 
     z_query_reply_options_t options;
     z_query_reply_options_default(&options);
-    options.encoding = *z_encoding_loan(&encoding);
+    options.encoding = &encoding;
     // Reply value encoding
     z_view_string_t reply_str;
     z_view_str_wrap(&reply_str, value);
@@ -53,7 +53,6 @@ void query_handler(const z_loaned_query_t *query, void *ctx) {
 
     z_query_reply(query, z_query_keyexpr(query), z_bytes_move(&reply_payload), &options);
     z_string_drop(z_string_move(&keystr));
-    z_encoding_drop(&encoding);
 }
 
 int main(int argc, char **argv) {

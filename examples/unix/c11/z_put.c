@@ -104,7 +104,7 @@ int main(int argc, char **argv) {
     printf("Putting Data ('%s': '%s')...\n", keyexpr, value);
     z_put_options_t options;
     z_put_options_default(&options);
-    options.encoding = *z_loan(encoding);
+    options.encoding = &encoding;
 #if Z_FEATURE_ATTACHMENT == 1
     z_owned_bytes_map_t map = z_bytes_map_new();
     z_bytes_map_insert_by_alias(&map, z_bytes_from_str("hi"), z_bytes_from_str("there"));
@@ -123,7 +123,6 @@ int main(int argc, char **argv) {
     zp_stop_read_task(z_loan_mut(s));
     zp_stop_lease_task(z_loan_mut(s));
     z_close(z_move(s));
-    z_drop(&encoding);
     return 0;
 }
 #else

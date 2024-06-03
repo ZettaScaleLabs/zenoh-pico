@@ -70,7 +70,7 @@ int main(int argc, char **argv) {
 
         z_publisher_put_options_t options;
         z_publisher_put_options_default(&options);
-        options.encoding = *z_loan(encoding);
+        options.encoding = &encoding;
         z_publisher_put(z_loan(pub), (const uint8_t *)buf, strlen(buf), &options);
     }
 
@@ -79,7 +79,6 @@ int main(int argc, char **argv) {
     zp_stop_read_task(z_loan_mut(s));
     zp_stop_lease_task(z_loan_mut(s));
     z_close(z_move(s));
-    z_drop(&encoding);
     free(buf);
     return 0;
 }
