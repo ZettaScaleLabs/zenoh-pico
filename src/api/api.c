@@ -239,18 +239,7 @@ int8_t zp_encoding_make(z_owned_encoding_t *encoding, z_encoding_id_t id, const 
     if (encoding->_val == NULL) {
         return _Z_ERR_SYSTEM_OUT_OF_MEMORY;
     }
-    encoding->_val->id = id;
-    // Clone schema
-    if (schema != NULL) {
-        encoding->_val->schema = _z_bytes_make(strlen(schema) + 1);
-        if (encoding->_val->schema.start == NULL) {
-            return _Z_ERR_SYSTEM_OUT_OF_MEMORY;
-        }
-        strcpy((char *)encoding->_val->schema.start, schema);
-    } else {
-        encoding->_val->schema = _z_bytes_empty();
-    }
-    return _Z_RES_OK;
+    return _z_encoding_make(encoding->_val, id, schema);
 }
 
 int8_t z_encoding_null(z_owned_encoding_t *encoding) { zp_encoding_make(encoding, Z_ENCODING_ID_DEFAULT, NULL); }
