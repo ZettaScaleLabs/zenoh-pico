@@ -322,10 +322,9 @@ int main(int argc, char **argv) {
     _ret_put_opt.congestion_control = Z_CONGESTION_CONTROL_BLOCK;
     z_owned_encoding_t _ret_encoding;
     zp_encoding_make(&_ret_encoding, Z_ENCODING_ID_TEXT_PLAIN, NULL);
-    _ret_put_opt.encoding = *z_loan(_ret_encoding);
+    _ret_put_opt.encoding = &_ret_encoding;
     _ret_int8 = z_put(z_loan(s1), z_loan(_ret_expr), (const uint8_t *)value, strlen(value), &_ret_put_opt);
     assert_eq(_ret_int8, 0);
-    z_drop(&_ret_encoding);
     printf("Ok\n");
 
     sleep(SLEEP);
