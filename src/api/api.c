@@ -242,6 +242,8 @@ int8_t zp_encoding_make(z_owned_encoding_t *encoding, z_encoding_id_t id, const 
     return _z_encoding_make(encoding->_val, id, schema);
 }
 
+z_owned_encoding_t *z_encoding_move(z_owned_encoding_t *encoding) { return encoding; }
+
 int8_t z_encoding_null(z_owned_encoding_t *encoding) { return zp_encoding_make(encoding, Z_ENCODING_ID_DEFAULT, NULL); }
 
 _Bool z_encoding_check(const z_owned_encoding_t *encoding) { return _z_encoding_check(encoding->_val); }

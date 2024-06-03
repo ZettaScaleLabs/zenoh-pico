@@ -179,6 +179,7 @@
                   z_owned_sample_t : z_sample_move,                               \
                   z_owned_query_t : z_query_move,                                 \
                   z_owned_bytes_t : z_bytes_move,                                 \
+                  z_owned_encoding_t : z_encoding_move,                           \
                   z_owned_sample_ring_channel_t : z_sample_ring_channel_move,     \
                   z_owned_sample_fifo_channel_t : z_sample_fifo_channel_move,     \
                   z_owned_query_ring_channel_t : z_query_ring_channel_move,       \

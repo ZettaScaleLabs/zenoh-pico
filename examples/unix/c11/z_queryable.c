@@ -61,7 +61,7 @@ void query_handler(const z_loaned_query_t *query, void *ctx) {
 
     z_query_reply_options_t options;
     z_query_reply_options_default(&options);
-    options.encoding = &encoding;
+    options.encoding = z_move(encoding);
 
 #if Z_FEATURE_ATTACHMENT == 1
     // Add attachment

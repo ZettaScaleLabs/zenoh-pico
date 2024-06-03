@@ -433,6 +433,11 @@ void z_encoding_drop(z_owned_encoding_t *encoding);
 const z_loaned_encoding_t *z_encoding_loan(const z_owned_encoding_t *encoding);
 
 /**
+ * Moves a owned :c:type:`z_owned_encoding_t`.
+ */
+z_owned_encoding_t *z_encoding_move(z_owned_encoding_t *encoding);
+
+/**
  * Constructs a :c:type:`z_owned_encoding_t` with default value.
  *
  * Parameters:
