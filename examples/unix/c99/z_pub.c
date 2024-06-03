@@ -95,17 +95,16 @@ int main(int argc, char **argv) {
         return -1;
     }
 
-    // Create encoding
-    z_owned_encoding_t encoding;
-    zp_encoding_make(&encoding, Z_ENCODING_ID_TEXT_PLAIN, NULL);
-
     printf("Press CTRL-C to quit...\n");
     char *buf = (char *)malloc(256);
     for (int idx = 0; idx < n; ++idx) {
-        sleep(1);
+        z_sleep_s(1);
         snprintf(buf, 256, "[%4d] %s", idx, value);
         printf("Putting Data ('%s': '%s')...\n", keyexpr, buf);
 
+        // Create encoding
+        z_owned_encoding_t encoding;
+        zp_encoding_make(&encoding, Z_ENCODING_ID_TEXT_PLAIN, NULL);
         z_publisher_put_options_t options;
         z_publisher_put_options_default(&options);
         options.encoding = &encoding;
