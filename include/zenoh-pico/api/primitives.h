@@ -112,7 +112,7 @@ int8_t zp_keyexpr_resolve(const z_loaned_session_t *zs, const z_loaned_keyexpr_t
  *   keyexpr: Pointer to a :c:type:`z_loaned_keyexpr_t` to be checked.
  *
  * Return:
- *   ``true`` if the keyexpr is valid, or ``false`` otherwise.
+ *   ``true`` if keyexpr is valid, or ``false`` otherwise.
  */
 _Bool z_keyexpr_is_initialized(const z_loaned_keyexpr_t *keyexpr);
 
@@ -124,7 +124,7 @@ _Bool z_keyexpr_is_initialized(const z_loaned_keyexpr_t *keyexpr);
  *   len: Number of characters in ``start``.
  *
  * Return:
- *   ``0`` if the passed string is a valid (and canon) key expression, or a ``negative value`` otherwise.
+ *   ``0`` if passed string is a valid (and canon) key expression, or a ``negative value`` otherwise.
  *   Error codes are defined in :c:enum:`zp_keyexpr_canon_status_t`.
  */
 int8_t z_keyexpr_is_canon(const char *start, size_t len);
@@ -137,7 +137,7 @@ int8_t z_keyexpr_is_canon(const char *start, size_t len);
  *   len: Number of characters in ``start``.
  *
  * Return:
- *   ``0`` if the passed string is a valid (and canon) key expression, or a ``negative value`` otherwise.
+ *   ``0`` if passed string is a valid (and canon) key expression, or a ``negative value`` otherwise.
  *   Error codes are defined in :c:enum:`zp_keyexpr_canon_status_t`.
  */
 int8_t zp_keyexpr_is_canon_null_terminated(const char *start);
@@ -151,7 +151,7 @@ int8_t zp_keyexpr_is_canon_null_terminated(const char *start);
  *   len: Number of characters in ``start``.
  *
  * Return:
- *   ``0`` if the canonization is successful, or a ``negative value`` otherwise.
+ *   ``0`` if canonization successful, or a ``negative value`` otherwise.
  *   Error codes are defined in :c:enum:`zp_keyexpr_canon_status_t`.
  */
 int8_t z_keyexpr_canonize(char *start, size_t *len);
@@ -165,7 +165,7 @@ int8_t z_keyexpr_canonize(char *start, size_t *len);
  *   len: Number of characters in ``start``.
  *
  * Return:
- *   ``0`` if the canonization is successful, or a ``negative value`` otherwise.
+ *   ``0`` if canonization successful, or a ``negative value`` otherwise.
  *   Error codes are defined in :c:enum:`zp_keyexpr_canon_status_t`.
  */
 int8_t zp_keyexpr_canonize_null_terminated(char *start);
@@ -206,7 +206,7 @@ _Bool zp_keyexpr_includes_null_terminated(const char *l, const char *r);
  *   r: Pointer to a :c:type:`z_loaned_keyexpr_t`.
  *
  * Return:
- *   ``true`` if the keyexprs intersect, i.e. there exists at least one key which is contained in both of the
+ *   ``true`` if keyexprs intersect, i.e. there exists at least one key which is contained in both of the
  * sets defined by ``l`` and ``r``. Otherwise, returns ``false``.
  */
 _Bool z_keyexpr_intersects(const z_loaned_keyexpr_t *l, const z_loaned_keyexpr_t *r);
@@ -221,7 +221,7 @@ _Bool z_keyexpr_intersects(const z_loaned_keyexpr_t *l, const z_loaned_keyexpr_t
  *   rlen: Number of characters in ``r``.
  *
  * Return:
- *   ``true`` if the keyexprs intersect, i.e. there exists at least one key which is contained in both of the
+ *   ``true`` if keyexprs intersect, i.e. there exists at least one key which is contained in both of the
  * sets defined by ``l`` and ``r``. Otherwise, returns ``false``.
  */
 _Bool zp_keyexpr_intersect_null_terminated(const char *l, const char *r);
@@ -291,7 +291,7 @@ const char *zp_config_get(const z_loaned_config_t *config, uint8_t key);
  *   value: Property value to be inserted.
  *
  * Return:
- *   ``0`` if the update is successful, ``negative value`` otherwise.
+ *   ``0`` if update successful, ``negative value`` otherwise.
  */
 int8_t zp_config_insert(z_loaned_config_t *config, uint8_t key, const char *value);
 
@@ -311,7 +311,7 @@ void z_scouting_config_default(z_owned_scouting_config_t *sc);
  *   sc: Pointer to an uninitialized :c:type:`z_owned_scouting_config_t`.
  *
  * Return:
- *   ``0`` if build is successful, ``negative value`` otherwise.
+ *   ``0`` if build successful, ``negative value`` otherwise.
  */
 int8_t z_scouting_config_from(z_owned_scouting_config_t *sc, const z_loaned_config_t *config);
 
@@ -336,7 +336,7 @@ const char *zp_scouting_config_get(const z_loaned_scouting_config_t *config, uin
  *   value: Property value to be inserted.
  *
  * Return:
- *   ``0`` if the update is successful, ``negative value`` otherwise.
+ *   ``0`` if update successful, ``negative value`` otherwise.
  */
 int8_t zp_scouting_config_insert(z_loaned_scouting_config_t *config, uint8_t key, const char *value);
 
@@ -349,7 +349,7 @@ int8_t zp_scouting_config_insert(z_loaned_scouting_config_t *config, uint8_t key
  *   schema: Pointer to a custom schema string value.
  *
  * Return:
- *   ``0`` if creation is successful, ``negative value`` otherwise.
+ *   ``0`` if creation successful, ``negative value`` otherwise.
  */
 int8_t zp_encoding_make(z_owned_encoding_t *encoding, z_encoding_id_t id, const char *schema);
 
@@ -360,7 +360,7 @@ int8_t zp_encoding_make(z_owned_encoding_t *encoding, z_encoding_id_t id, const 
  *   encoding: Pointer to an uninitialized :c:type:`z_owned_encoding_t`.
  *
  * Return:
- *   ``0`` if creation is successful, ``negative value`` otherwise.
+ *   ``0`` if creation successful, ``negative value`` otherwise.
  */
 int8_t zp_encoding_default(z_owned_encoding_t *encoding);
 
@@ -406,7 +406,7 @@ z_owned_encoding_t *z_encoding_move(z_owned_encoding_t *encoding);
  *   encoding: Pointer to an uninitialized :c:type:`z_owned_encoding_t`.
  *
  * Return:
- *   ``0`` if creation is successful,``negative value`` otherwise.
+ *   ``0`` if creation successful,``negative value`` otherwise.
  */
 int8_t z_encoding_null(z_owned_encoding_t *encoding);
 
@@ -440,7 +440,7 @@ size_t z_bytes_len(const z_loaned_bytes_t *bytes);
  *   str: Pointer to an uninitialized :c:type:`z_owned_string_t` to contain the decoded string.
  *
  * Return:
- *   ``0`` if decode is successful, or a ``negative value`` otherwise.
+ *   ``0`` if decode successful, or a ``negative value`` otherwise.
  */
 int8_t z_bytes_decode_into_string(const z_loaned_bytes_t *bytes, z_owned_string_t *str);
 
@@ -452,7 +452,7 @@ int8_t z_bytes_decode_into_string(const z_loaned_bytes_t *bytes, z_owned_string_
  *   str: Pointer to the string to encode.
  *
  * Return:
- *   ``0`` if encode is successful, ``negative value`` otherwise.
+ *   ``0`` if encode successful, ``negative value`` otherwise.
  */
 int8_t z_bytes_encode_from_string(z_owned_bytes_t *buffer, const z_loaned_string_t *str);
 
@@ -479,7 +479,7 @@ z_query_target_t z_query_target_default(void);
  * Build an automatic query consolidation :c:type:`z_query_consolidation_t`.
  *
  * A query consolidation strategy will automatically be selected depending on the query selector.
- * If the selector contains time range properties, no consolidation is performed.
+ * If selector contains time range properties, no consolidation is performed.
  * Otherwise the :c:func:`z_query_consolidation_latest` strategy is used.
  *
  * Return:
@@ -952,7 +952,7 @@ void z_delete_options_default(z_delete_options_t *options);
  *   options: Pointer to a :c:type:`z_put_options_t` to configure the operation.
  *
  * Return:
- *   ``0`` if the put operation is successful, ``negative value`` otherwise.
+ *   ``0`` if put operation successful, ``negative value`` otherwise.
  */
 int8_t z_put(const z_loaned_session_t *zs, const z_loaned_keyexpr_t *keyexpr, const uint8_t *payload,
              z_zint_t payload_len, const z_put_options_t *options);
@@ -966,7 +966,7 @@ int8_t z_put(const z_loaned_session_t *zs, const z_loaned_keyexpr_t *keyexpr, co
  *   options: Pointer to a :c:type:`z_delete_options_t` to configure the operation.
  *
  * Return:
- *   ``0`` if the delete operation is successful, ``negative value`` otherwise.
+ *   ``0`` if delete operation successful, ``negative value`` otherwise.
  */
 int8_t z_delete(const z_loaned_session_t *zs, const z_loaned_keyexpr_t *keyexpr, const z_delete_options_t *options);
 
@@ -990,7 +990,7 @@ void z_publisher_options_default(z_publisher_options_t *options);
  *   options: Pointer to a :c:type:`z_publisher_options_t` to configure the operation.
  *
  * Return:
- *   ``0`` if the declare is successful, ``negative value`` otherwise.
+ *   ``0`` if declare successful, ``negative value`` otherwise.
  */
 int8_t z_declare_publisher(z_owned_publisher_t *pub, const z_loaned_session_t *zs, const z_loaned_keyexpr_t *keyexpr,
                            const z_publisher_options_t *options);
@@ -1002,7 +1002,7 @@ int8_t z_declare_publisher(z_owned_publisher_t *pub, const z_loaned_session_t *z
  *   pub: Pointer to a moved :c:type:`z_owned_publisher_t` to undeclare.
  *
  * Return:
- *   ``0`` if the undeclare is successful, ``negative value`` otherwise.
+ *   ``0`` if undeclare successful, ``negative value`` otherwise.
  */
 int8_t z_undeclare_publisher(z_owned_publisher_t *pub);
 
@@ -1032,7 +1032,7 @@ void z_publisher_delete_options_default(z_publisher_delete_options_t *options);
  *   options: Pointer to a :c:type:`z_publisher_put_options_t` to configure the operation.
  *
  * Return:
- *   ``0`` if the put operation is successful, ``negative value`` otherwise.
+ *   ``0`` if put operation successful, ``negative value`` otherwise.
  */
 int8_t z_publisher_put(const z_loaned_publisher_t *pub, const uint8_t *payload, size_t len,
                        const z_publisher_put_options_t *options);
@@ -1045,7 +1045,7 @@ int8_t z_publisher_put(const z_loaned_publisher_t *pub, const uint8_t *payload, 
  *   options: Pointer to a :c:type:`z_publisher_delete_options_t` to configure the delete operation.
  *
  * Return:
- *   ``0`` if the delete operation is successful, ``negative value`` otherwise.
+ *   ``0`` if delete operation successful, ``negative value`` otherwise.
  */
 int8_t z_publisher_delete(const z_loaned_publisher_t *pub, const z_publisher_delete_options_t *options);
 #endif
@@ -1070,18 +1070,18 @@ void z_get_options_default(z_get_options_t *options);
  *   options: Pointer to a :c:type:`z_get_options_t` to configure the operation.
  *
  * Return:
- *   ``0`` if the put operation is successful, ``negative value`` otherwise.
+ *   ``0`` if put operation successful, ``negative value`` otherwise.
  */
 int8_t z_get(const z_loaned_session_t *zs, const z_loaned_keyexpr_t *keyexpr, const char *parameters,
              z_owned_closure_reply_t *callback, z_get_options_t *options);
 /**
- * Check if the queryable answered with an OK, which allows this value to be treated as a sample.
+ * Check if queryable answered with an OK, which allows this value to be treated as a sample.
  *
  * Parameters:
  *   reply: Pointer to a :c:type:`z_loaned_reply_t` to check.
  *
  * Return:
- *   ``true`` if the queryable answered with an OK, ``false`` otherwise.
+ *   ``true`` if queryable answered with an OK, ``false`` otherwise.
  */
 _Bool z_reply_is_ok(const z_loaned_reply_t *reply);
 
@@ -1132,7 +1132,7 @@ void z_queryable_options_default(z_queryable_options_t *options);
  *   options: Pointer to a :c:type:`z_queryable_options_t` to configure the declare.
  *
  * Return:
- *   ``0`` if the declare operation is successful, ``negative value`` otherwise.
+ *   ``0`` if declare operation successful, ``negative value`` otherwise.
  */
 int8_t z_declare_queryable(z_owned_queryable_t *queryable, const z_loaned_session_t *zs,
                            const z_loaned_keyexpr_t *keyexpr, z_owned_closure_query_t *callback,
@@ -1145,7 +1145,7 @@ int8_t z_declare_queryable(z_owned_queryable_t *queryable, const z_loaned_sessio
  *   queryable: Pointer to a :c:type:`z_owned_queryable_t` to undeclare.
  *
  * Return:
- *   ``0`` if the undeclare operation is successful, ``negative value`` otherwise.
+ *   ``0`` if undeclare operation successful, ``negative value`` otherwise.
  */
 int8_t z_undeclare_queryable(z_owned_queryable_t *queryable);
 
@@ -1173,7 +1173,7 @@ void z_query_reply_options_default(z_query_reply_options_t *options);
  *   options: Pointer to a :c:type:`z_query_reply_options_t` to configure the reply.
  *
  * Return:
- *   ``0`` if the reply operation is successful, ``negative value`` otherwise.
+ *   ``0`` if reply operation successful, ``negative value`` otherwise.
  */
 int8_t z_query_reply(const z_loaned_query_t *query, const z_loaned_keyexpr_t *keyexpr, z_owned_bytes_t *payload,
                      const z_query_reply_options_t *options);
@@ -1187,7 +1187,7 @@ int8_t z_query_reply(const z_loaned_query_t *query, const z_loaned_keyexpr_t *ke
  *   name: Pointer to the null-terminated string of the keyexpr.
  *
  * Return:
- *   ``0`` if creation is successful, ``negative value`` otherwise.
+ *   ``0`` if creation successful, ``negative value`` otherwise.
  */
 int8_t z_keyexpr_new(z_owned_keyexpr_t *keyexpr, const char *name);
 
@@ -1203,7 +1203,7 @@ int8_t z_keyexpr_new(z_owned_keyexpr_t *keyexpr, const char *name);
  *   keyexpr: Pointer to a :c:type:`z_loaned_keyexpr_t` to bind the keyexpr with.
  *
  * Return:
- *   ``0`` if declare is successful, ``negative value`` otherwise.
+ *   ``0`` if declare successful, ``negative value`` otherwise.
  */
 int8_t z_declare_keyexpr(z_owned_keyexpr_t *ke, const z_loaned_session_t *zs, const z_loaned_keyexpr_t *keyexpr);
 
@@ -1215,7 +1215,7 @@ int8_t z_declare_keyexpr(z_owned_keyexpr_t *ke, const z_loaned_session_t *zs, co
  *   keyexpr: Pointer to a moved :c:type:`z_owned_keyexpr_t` to undeclare.
  *
  * Return:
- *   ``0`` if the undeclare is successful, ``negative value`` otherwise.
+ *   ``0`` if undeclare successful, ``negative value`` otherwise.
  */
 // TODO(sashacmc): change parameters order?
 int8_t z_undeclare_keyexpr(const z_loaned_session_t *zs, z_owned_keyexpr_t *keyexpr);
@@ -1240,7 +1240,7 @@ void z_subscriber_options_default(z_subscriber_options_t *options);
  *   options: Pointer to a :c:type:`z_subscriber_options_t` to configure the operation
  *
  * Return:
- *   ``0`` if the declare is successful, ``negative value`` otherwise.
+ *   ``0`` if declare successful, ``negative value`` otherwise.
  */
 int8_t z_declare_subscriber(z_owned_subscriber_t *sub, const z_loaned_session_t *zs, const z_loaned_keyexpr_t *keyexpr,
                             z_owned_closure_sample_t *callback, const z_subscriber_options_t *options);
@@ -1252,7 +1252,7 @@ int8_t z_declare_subscriber(z_owned_subscriber_t *sub, const z_loaned_session_t 
  *   sub: Pointer to a :c:type:`z_owned_subscriber_t` to undeclare.
  *
  * Return:
- *   ``0`` if the undeclare is successful, ``negative value`` otherwise.
+ *   ``0`` if undeclare successful, ``negative value`` otherwise.
  */
 int8_t z_undeclare_subscriber(z_owned_subscriber_t *sub);
 
@@ -1288,7 +1288,7 @@ void zp_task_read_options_default(zp_task_read_options_t *options);
  *   options: Pointer to a :c:type:`zp_task_read_options_t` to configure the task.
  *
  * Return:
- *   ``0`` if the task started successfully, ``negative value`` otherwise.
+ *   ``0`` if task started successfully, ``negative value`` otherwise.
  */
 int8_t zp_start_read_task(z_loaned_session_t *zs, const zp_task_read_options_t *options);
 
@@ -1301,7 +1301,7 @@ int8_t zp_start_read_task(z_loaned_session_t *zs, const zp_task_read_options_t *
  *   zs: Pointer to a :c:type:`z_loaned_session_t` to stop the task from.
  *
  * Return:
- *   ``0`` if the task stopped successfully, ``negative value`` otherwise.
+ *   ``0`` if task stopped successfully, ``negative value`` otherwise.
  */
 int8_t zp_stop_read_task(z_loaned_session_t *zs);
 
@@ -1325,7 +1325,7 @@ void zp_task_lease_options_default(zp_task_lease_options_t *options);
  *   options: Pointer to a :c:type:`zp_task_lease_options_t` to configure the task.
  *
  * Return:
- *   ``0`` if the task started successfully, ``negative value`` otherwise.
+ *   ``0`` if task started successfully, ``negative value`` otherwise.
  */
 int8_t zp_start_lease_task(z_loaned_session_t *zs, const zp_task_lease_options_t *options);
 
@@ -1338,7 +1338,7 @@ int8_t zp_start_lease_task(z_loaned_session_t *zs, const zp_task_lease_options_t
  *   zs: Pointer to a :c:type:`z_loaned_session_t` to stop the task from.
  *
  * Return:
- *   ``0`` if the task stopped successfully, ``negative value`` otherwise.
+ *   ``0`` if task stopped successfully, ``negative value`` otherwise.
  */
 int8_t zp_stop_lease_task(z_loaned_session_t *zs);
 
@@ -1359,7 +1359,7 @@ void zp_read_options_default(zp_read_options_t *options);
  *   options: Pointer to a :c:type:`zp_read_options_t` to configure the operation.
  *
  * Return:
- *   ``0`` if the execution was successful, ``negative value`` otherwise.
+ *   ``0`` if execution was successful, ``negative value`` otherwise.
  */
 int8_t zp_read(const z_loaned_session_t *zs, const zp_read_options_t *options);
 
@@ -1379,7 +1379,7 @@ void zp_send_keep_alive_options_default(zp_send_keep_alive_options_t *options);
  *   options: Pointer to a :c:type:`zp_send_keep_alive_options_t` to configure the operation.
  *
  * Return:
- *   ``0`` if the execution was successful, ``negative value`` otherwise.
+ *   ``0`` if execution was successful, ``negative value`` otherwise.
  */
 int8_t zp_send_keep_alive(const z_loaned_session_t *zs, const zp_send_keep_alive_options_t *options);
 
@@ -1399,7 +1399,7 @@ void zp_send_join_options_default(zp_send_join_options_t *options);
  *   options: Pointer to a :c:type:`zp_send_keep_alive_options_t` to configure the operation.
  *
  * Return:
- *   ``0`` if the execution was successful, ``negative value`` otherwise.
+ *   ``0`` if execution was successful, ``negative value`` otherwise.
  */
 int8_t zp_send_join(const z_loaned_session_t *zs, const zp_send_join_options_t *options);
 
