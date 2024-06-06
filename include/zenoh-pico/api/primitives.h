@@ -1256,17 +1256,17 @@ int8_t z_declare_subscriber(z_owned_subscriber_t *sub, const z_loaned_session_t 
  */
 int8_t z_undeclare_subscriber(z_owned_subscriber_t *sub);
 
-// FIXME: is it useful? It should be reworked to return int8_t in that case.
 /**
- * Build a keyexpr from a subscriber
+ * Copy the keyexpr of a subscriber
  *
  * Parameters:
- *   sub: Pointer to a :c:type:`z_loaned_subscriber_t` to undeclare.
+ *   keyexpr: Pointer to an uninitialized :c:type:`z_owned_keyexpr_t` to contain the keyexpr.
+ *   sub: Pointer to a :c:type:`z_loaned_subscriber_t` to copy the keyexpr from.
  *
  * Return:
- *   The built :c:type:`z_owned_keyexpr_t`.
+ *   ``0`` if copy successful, ``negative value`` otherwise.
  */
-z_owned_keyexpr_t z_subscriber_keyexpr(z_loaned_subscriber_t *sub);
+int8_t z_subscriber_keyexpr(z_owned_keyexpr_t *keyexpr, z_loaned_subscriber_t *sub);
 #endif
 
 /************* Multi Thread Tasks helpers **************/
