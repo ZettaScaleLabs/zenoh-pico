@@ -54,25 +54,24 @@ extern "C" {
     } z_view_##name##_t;
 
 /**
- * Represents a variable-length encoding unsigned integer.
+ * Represent a variable-length encoding unsigned integer.
  *
  * It is equivalent to the size of a ``size_t``.
  */
 typedef _z_zint_t z_zint_t;
 
 /**
- * Represents an array of bytes.
+ * Represent an array of bytes.
  *
  * Members:
  *   size_t len: The length of the bytes array.
  *   uint8_t *start: A pointer to the bytes array.
  */
-
 _OWNED_TYPE_PTR(_z_bytes_t, bytes)
 _LOANED_TYPE(_z_bytes_t, bytes)
 
 /**
- * Represents a Zenoh ID.
+ * Represent a Zenoh ID.
  *
  * In general, valid Zenoh IDs are LSB-first 128bit unsigned and non-zero integers.
  *
@@ -82,23 +81,22 @@ _LOANED_TYPE(_z_bytes_t, bytes)
 typedef _z_id_t z_id_t;
 
 /**
- * Represents a string without null-terminator.
+ * Represent a string without null-terminator.
  *
  * Members:
  *   size_t len: The length of the string.
  *   const char *val: A pointer to the string.
  */
-
 _OWNED_TYPE_PTR(_z_string_t, string)
 _LOANED_TYPE(_z_string_t, string)
 _VIEW_TYPE(_z_string_t, string)
 
 /**
- * Represents a key expression in Zenoh.
+ * Represent a key expression in Zenoh.
  *
- * Operations over :c:type:`z_keyexpr_t` must be done using the provided functions:
+ * Members are private and operations must be done using the provided functions:
  *
- *   - :c:func:`z_keyexpr`
+ *   - :c:func:`z_keyexpr_new`
  *   - :c:func:`z_keyexpr_is_initialized`
  *   - :c:func:`z_keyexpr_to_string`
  *   - :c:func:`zp_keyexpr_resolve`
@@ -108,11 +106,9 @@ _LOANED_TYPE(_z_keyexpr_t, keyexpr)
 _VIEW_TYPE(_z_keyexpr_t, keyexpr)
 
 /**
- * Represents a Zenoh configuration.
+ * Represent a Zenoh configuration, used to configure Zenoh sessions upon opening.
  *
- * Configurations are usually used to set the parameters of a Zenoh session upon its opening.
- *
- * Operations over :c:type:`z_config_t` must be done using the provided functions:
+ * Members are private and operations must be done using the provided functions:
  *
  *   - :c:func:`z_config_new`
  *   - :c:func:`z_config_default`
@@ -123,11 +119,9 @@ _OWNED_TYPE_PTR(_z_config_t, config)
 _LOANED_TYPE(_z_config_t, config)
 
 /**
- * Represents a scouting configuration.
+ * Represent a scouting configuration, used to configure a scouting procedure.
  *
- * Configurations are usually used to set the parameters of the scouting procedure.
- *
- * Operations over :c:type:`z_scouting_config_t` must be done using the provided functions:
+ * Members are private and operations must be done using the provided functions:
  *
  *   - :c:func:`z_scouting_config_default`
  *   - :c:func:`z_scouting_config_from`
@@ -138,16 +132,15 @@ _OWNED_TYPE_PTR(_z_scouting_config_t, scouting_config)
 _LOANED_TYPE(_z_scouting_config_t, scouting_config)
 
 /**
- * Represents a Zenoh session.
+ * Represent a Zenoh session.
  */
-
 _OWNED_TYPE_RC(_z_session_rc_t, session)
 _LOANED_TYPE(_z_session_rc_t, session)
 
 /**
- * Represents a Zenoh (push) Subscriber entity.
+ * Represent a Zenoh subscriber entity.
  *
- * Operations over :c:type:`z_subscriber_t` must be done using the provided functions:
+ * Members are private and operations must be done using the provided functions:
  *
  *   - :c:func:`z_declare_subscriber`
  *   - :c:func:`z_undeclare_subscriber`
@@ -156,9 +149,9 @@ _OWNED_TYPE_PTR(_z_subscriber_t, subscriber)
 _LOANED_TYPE(_z_subscriber_t, subscriber)
 
 /**
- * Represents a Zenoh Publisher entity.
+ * Represent a Zenoh publisher entity.
  *
- * Operations over :c:type:`z_publisher_t` must be done using the provided functions:
+ * Members are private and operations must be done using the provided functions:
  *
  *   - :c:func:`z_declare_publisher`
  *   - :c:func:`z_undeclare_publisher`
@@ -169,9 +162,9 @@ _OWNED_TYPE_PTR(_z_publisher_t, publisher)
 _LOANED_TYPE(_z_publisher_t, publisher)
 
 /**
- * Represents a Zenoh Queryable entity.
+ * Represent a Zenoh queryable entity.
  *
- * Operations over :c:type:`z_queryable_t` must be done using the provided functions:
+ * Members are private and operations must be done using the provided functions:
  *
  *   - :c:func:`z_declare_queryable`
  *   - :c:func:`z_undeclare_queryable`
@@ -180,14 +173,14 @@ _OWNED_TYPE_PTR(_z_queryable_t, queryable)
 _LOANED_TYPE(_z_queryable_t, queryable)
 
 /**
- * Represents a Zenoh query entity, received by Zenoh Queryable entities.
+ * Represent a Zenoh query entity, received by Zenoh queryable entities.
  *
  */
 _OWNED_TYPE_RC(_z_query_rc_t, query)
 _LOANED_TYPE(_z_query_rc_t, query)
 
 /**
- * Represents the encoding of a payload, in a MIME-like format.
+ * Represent the encoding of a payload, in a MIME-like format.
  *
  * Members:
  *   z_encoding_id_t prefix: The integer prefix of this encoding.
@@ -197,45 +190,42 @@ _OWNED_TYPE_PTR(_z_encoding_t, encoding)
 _LOANED_TYPE(_z_encoding_t, encoding)
 
 /*
- * Represents timestamp value in Zenoh
+ * Represent timestamp value in Zenoh
  */
 typedef _z_timestamp_t z_timestamp_t;
 
 /**
- * Represents a Zenoh value.
+ * Represent a Zenoh value.
  *
  * Members:
  *   z_loaned_encoding_t encoding: The encoding of the `payload`.
  *   z_loaned_bytes_t* payload: The payload of this zenoh value.
  */
-
 _OWNED_TYPE_PTR(_z_value_t, value)
 _LOANED_TYPE(_z_value_t, value)
 
 /**
- * Represents the set of options that can be applied to a (push) subscriber,
- * upon its declaration via :c:func:`z_declare_subscriber`.
+ * Represent the configuration used to configure a subscriber upon declaration.
  *
  * Members:
- *   z_reliability_t reliability: The subscription reliability.
+ *   z_reliability_t reliability: The subscription reliability value.
  */
 typedef struct {
     z_reliability_t reliability;
 } z_subscriber_options_t;
 
 /**
- * Represents the replies consolidation to apply on replies to a :c:func:`z_get`.
+ * Represent the reply consolidation mode to apply on replies to a :c:func:`z_get`.
  *
  * Members:
- *   z_consolidation_mode_t mode: Defines the consolidation mode to apply to the replies.
+ *   z_consolidation_mode_t mode: the consolidation mode, see :c:type:`z_consolidation_mode_t`
  */
 typedef struct {
     z_consolidation_mode_t mode;
 } z_query_consolidation_t;
 
 /**
- * Represents the set of options that can be applied to a publisher,
- * upon its declaration via :c:func:`z_declare_publisher`.
+ * Represent the configuration used to configure a subscriber upon declaration.
  *
  * Members:
  *   z_congestion_control_t congestion_control: The congestion control to apply when routing messages from this
@@ -248,8 +238,7 @@ typedef struct {
 } z_publisher_options_t;
 
 /**
- * Represents the set of options that can be applied to a queryable,
- * upon its declaration via :c:func:`z_declare_queryable`.
+ * Represent the configuration used to configure a queryable upon declaration.
  *
  * Members:
  *   _Bool complete: The completeness of the queryable.
@@ -259,8 +248,7 @@ typedef struct {
 } z_queryable_options_t;
 
 /**
- * Represents the set of options that can be applied to a query reply,
- * sent via :c:func:`z_query_reply`.
+ * Represent the configuration used to configure a query reply.
  *
  * Members:
  *   z_owned_encoding_t *encoding: The encoding of the payload.
@@ -272,8 +260,7 @@ typedef struct {
 } z_query_reply_options_t;
 
 /**
- * Represents the set of options that can be applied to the put operation,
- * whenever issued via :c:func:`z_put`.
+ * Represent the configuration used to configure a put operation.
  *
  * Members:
  *   z_owned_encoding_t *encoding: The encoding of the payload.
@@ -290,8 +277,7 @@ typedef struct {
 } z_put_options_t;
 
 /**
- * Represents the set of options that can be applied to the delete operation,
- * whenever issued via :c:func:`z_delete`.
+ * Represent the configuration used to configure a delete operation,
  *
  * Members:
  *   z_congestion_control_t congestion_control: The congestion control to apply when routing this message.
@@ -303,8 +289,7 @@ typedef struct {
 } z_delete_options_t;
 
 /**
- * Represents the set of options that can be applied to the put operation by a previously declared publisher,
- * whenever issued via :c:func:`z_publisher_put`.
+ * Represent the configuration used to configure a put operation by a previously declared publisher.
  *
  * Members:
  *   z_owned_encoding_t *encoding: The encoding of the payload.
@@ -317,16 +302,14 @@ typedef struct {
 } z_publisher_put_options_t;
 
 /**
- * Represents the set of options that can be applied to the delete operation by a previously declared publisher,
- * whenever issued via :c:func:`z_publisher_delete`.
+ * Represent the configuration used to configure a delete operation by a previously declared publisher,
  */
 typedef struct {
     uint8_t __dummy;  // Just to avoid empty structures that might cause undefined behavior
 } z_publisher_delete_options_t;
 
 /**
- * Represents the set of options that can be applied to the get operation,
- * whenever issued via :c:func:`z_get`.
+ * Represent the configuration used to configure a get operation,
  *
  * Members:
  *   z_query_target_t target: The queryables that should be targeted by this get.
@@ -346,8 +329,7 @@ typedef struct {
 } z_get_options_t;
 
 /**
- * Represents the set of options that can be applied to the read task,
- * whenever issued via :c:func:`zp_start_read_task`.
+ * Represent the configuration used to configure a read task.
  */
 typedef struct {
 #if Z_FEATURE_MULTI_THREAD == 1
@@ -358,8 +340,7 @@ typedef struct {
 } zp_task_read_options_t;
 
 /**
- * Represents the set of options that can be applied to the lease task,
- * whenever issued via :c:func:`zp_start_lease_task`.
+ * Represent the configuration used to configure a lease task.
  */
 typedef struct {
 #if Z_FEATURE_MULTI_THREAD == 1
@@ -370,59 +351,60 @@ typedef struct {
 } zp_task_lease_options_t;
 
 /**
- * Represents the set of options that can be applied to the read operation,
- * whenever issued via :c:func:`zp_read`.
+ * Represent the configuration used to configure a read operation.
  */
 typedef struct {
     uint8_t __dummy;  // Just to avoid empty structures that might cause undefined behavior
 } zp_read_options_t;
 
 /**
- * Represents the set of options that can be applied to the keep alive send,
- * whenever issued via :c:func:`zp_send_keep_alive`.
+ * Represent the configuration used to configure a send keep alive operation.
  */
 typedef struct {
     uint8_t __dummy;  // Just to avoid empty structures that might cause undefined behavior
 } zp_send_keep_alive_options_t;
 
 /**
- * Represents the set of options that can be applied to the join send,
- * whenever issued via :c:func:`zp_send_join`.
+ * Represent the configuration used to configure a send join operation.
  */
 typedef struct {
     uint8_t __dummy;  // Just to avoid empty structures that might cause undefined behavior
 } zp_send_join_options_t;
 
 /**
- * QoS settings of zenoh message.
+ * QoS settings of a zenoh message.
  */
 typedef _z_qos_t z_qos_t;
+
 /**
- * Returns message priority.
+ * Return message priority.
  */
 static inline z_priority_t z_qos_get_priority(z_qos_t qos) {
     z_priority_t ret = _z_n_qos_get_priority(qos);
     return ret == _Z_PRIORITY_CONTROL ? Z_PRIORITY_DEFAULT : ret;
 }
+
 /**
- * Returns message congestion control.
+ * Return message congestion control.
  */
 static inline z_congestion_control_t z_qos_get_congestion_control(z_qos_t qos) {
     return _z_n_qos_get_congestion_control(qos);
 }
+
 /**
- * Returns message express flag. If set to true, the message is not batched to reduce the latency.
+ * Return message express flag. If set to true, the message is not batched to reduce the latency.
  */
 static inline _Bool z_qos_get_express(z_qos_t qos) { return _z_n_qos_get_express(qos); }
+
 /**
- * Returns default qos settings.
+ * Return default qos settings.
  */
 static inline z_qos_t z_qos_default(void) { return _Z_N_QOS_DEFAULT; }
 
 /**
- * Represents a data sample.
+ * Represent a data sample.
  *
- * A sample is the value associated to a given :c:type:`z_keyexpr_t` at a given point in time.
+ * A sample is the value associated to a given key-expression at a given point in time.
  *
  * Members:
  *   z_keyexpr_t keyexpr: The keyexpr of this data sample.
@@ -436,7 +418,7 @@ _OWNED_TYPE_RC(_z_sample_rc_t, sample)
 _LOANED_TYPE(_z_sample_rc_t, sample)
 
 /**
- * Represents the content of a `hello` message returned by a zenoh entity as a reply to a `scout` message.
+ * Represent the content of a `hello` message returned by a zenoh entity as a reply to a `scout` message.
  *
  * Members:
  *   z_whatami_t whatami: The kind of zenoh entity.
@@ -447,21 +429,20 @@ _OWNED_TYPE_PTR(_z_hello_t, hello)
 _LOANED_TYPE(_z_hello_t, hello)
 
 /**
- * Represents the reply to a query.
+ * Represent the reply to a query.
  */
 _OWNED_TYPE_RC(_z_reply_rc_t, reply)
 _LOANED_TYPE(_z_reply_rc_t, reply)
 
 /**
- * Represents an array of ``z_str_t``.
+ * Represent an array of ``z_string_t``.
  *
  * Operations over :c:type:`z_loaned_string_array_t` must be done using the provided functions:
  *
- *   - ``char *z_string_array_get(z_loaned_string_array_t *a, size_t k);``
- *   - ``size_t z_string_array_len(z_loaned_string_array_t *a);``
- *   - ``_Bool z_str_array_array_is_empty(z_loaned_string_array_t *a);``
+ *   - :c:func:`z_string_array_get`
+ *   - :c:func:`z_string_array_len`
+ *   - :c:func:`z_str_array_array_is_empty`
  */
-
 _OWNED_TYPE_PTR(_z_string_vec_t, string_array)
 _LOANED_TYPE(_z_string_vec_t, string_array)
 _VIEW_TYPE(_z_string_vec_t, string_array)
@@ -475,7 +456,7 @@ typedef void (*z_owned_sample_handler_t)(z_owned_sample_t *sample, void *arg);
 typedef _z_data_handler_t z_data_handler_t;
 
 /**
- * Represents the sample closure.
+ * Represent the sample closure.
  *
  * A closure is a structure that contains all the elements for stateful, memory-leak-free callbacks.
  *
@@ -493,7 +474,7 @@ typedef struct {
 void z_closure_sample_call(const z_owned_closure_sample_t *closure, const z_loaned_sample_t *sample);
 
 /**
- * Represents the owned sample closure.
+ * Represent the owned sample closure.
  *
  * A closure is a structure that contains all the elements for stateful, memory-leak-free callbacks.
  *
@@ -514,7 +495,7 @@ void z_closure_owned_sample_call(const z_owned_closure_owned_sample_t *closure, 
 typedef _z_queryable_handler_t z_queryable_handler_t;
 
 /**
- * Represents the query callback closure.
+ * Represent the query callback closure.
  *
  * A closure is a structure that contains all the elements for stateful, memory-leak-free callbacks.
  *
@@ -535,7 +516,7 @@ void z_closure_query_call(const z_owned_closure_query_t *closure, const z_loaned
 typedef void (*z_owned_query_handler_t)(z_owned_query_t *query, void *arg);
 
 /**
- * Represents the owned query closure.
+ * Represent the owned query closure.
  *
  * A closure is a structure that contains all the elements for stateful, memory-leak-free callbacks.
  *
@@ -557,7 +538,7 @@ typedef void (*z_owned_reply_handler_t)(z_owned_reply_t *reply, void *arg);
 typedef _z_reply_handler_t z_reply_handler_t;
 
 /**
- * Represents the query reply callback closure.
+ * Represent the query reply callback closure.
  *
  * A closure is a structure that contains all the elements for stateful, memory-leak-free callbacks.
  *
@@ -576,7 +557,7 @@ typedef struct {
 void z_closure_reply_call(const z_owned_closure_reply_t *closure, const z_loaned_reply_t *reply);
 
 /**
- * Represents the owned query reply callback closure.
+ * Represent the owned query reply callback closure.
  *
  * A closure is a structure that contains all the elements for stateful, memory-leak-free callbacks.
  *
@@ -597,7 +578,7 @@ void z_closure_owned_reply_call(const z_owned_closure_owned_reply_t *closure, z_
 typedef void (*z_owned_hello_handler_t)(z_owned_hello_t *hello, void *arg);
 
 /**
- * Represents the Zenoh ID callback closure.
+ * Represent the Zenoh ID callback closure.
  *
  * A closure is a structure that contains all the elements for stateful, memory-leak-free callbacks.
  *
@@ -618,7 +599,7 @@ void z_closure_hello_call(const z_owned_closure_hello_t *closure, z_owned_hello_
 typedef void (*z_id_handler_t)(const z_id_t *id, void *arg);
 
 /**
- * Represents the Zenoh ID callback closure.
+ * Represent the Zenoh ID callback closure.
  *
  * A closure is a structure that contains all the elements for stateful, memory-leak-free callbacks.
  *
@@ -654,41 +635,47 @@ typedef struct z_owned_bytes_map_t {
 } z_owned_bytes_map_t;
 
 /**
- * Aliases `this` into a generic `z_attachment_t`, allowing it to be passed to corresponding APIs.
+ * Alias `this` into a generic `z_attachment_t`, allowing it to be passed to corresponding APIs.
  */
 z_attachment_t z_bytes_map_as_attachment(const z_owned_bytes_map_t *this_);
+
 /**
- * Returns `true` if the map is not in its gravestone state
+ * Return `true` if the map is not in its gravestone state
  */
 bool z_bytes_map_check(const z_owned_bytes_map_t *this_);
+
 /**
- * Destroys the map, resetting `this` to its gravestone value.
+ * Delete the map, resetting `this` to its gravestone value.
  *
  * This function is double-free safe, passing a pointer to the gravestone value will have no effect.
  */
 void z_bytes_map_drop(z_owned_bytes_map_t *this_);
+
 /**
- * Constructs a map from the provided attachment, copying keys and values.
+ * Build a map from the provided attachment, copying keys and values.
  *
  * If `this` is at gravestone value, the returned value will also be at gravestone value.
  */
 z_owned_bytes_map_t z_bytes_map_from_attachment(z_attachment_t this_);
+
 /**
- * Constructs a map from the provided attachment, aliasing the attachment's keys and values.
+ * Build a map from the provided attachment, aliasing the attachment's keys and values.
  *
  * If `this` is at gravestone value, the returned value will also be at gravestone value.
  */
 
 z_owned_bytes_map_t z_bytes_map_from_attachment_aliasing(z_attachment_t this_);
+
 /**
- * Returns the value associated with `key`, returning a gravestone value if:
+ * Return the value associated with `key`, returning a gravestone value if:
  * - `this` or `key` is in gravestone state.
  * - `this` has no value associated to `key`
  */
 
 z_loaned_bytes_t *z_bytes_map_get(const z_owned_bytes_map_t *this_, z_loaned_bytes_t *key);
+
 /**
- * Associates `value` to `key` in the map, aliasing them.
+ * Associate `value` to `key` in the map, aliasing them.
  *
  * Note that once `key` is aliased, reinserting at the same key may alias the previous instance, or the new instance of
  * `key`.
@@ -697,19 +684,21 @@ z_loaned_bytes_t *z_bytes_map_get(const z_owned_bytes_map_t *this_, z_loaned_byt
  */
 
 void z_bytes_map_insert_by_alias(const z_owned_bytes_map_t *this_, z_loaned_bytes_t *key, z_loaned_bytes_t *value);
+
 /**
- * Associates `value` to `key` in the map, copying them to obtain ownership: `key` and `value` are not aliased past the
+ * Associate `value` to `key` in the map, copying them to obtain ownership: `key` and `value` are not aliased past the
  * function's return.
  *
  * Calling this with `NULL` or the gravestone value is undefined behaviour.
  */
 
 void z_bytes_map_insert_by_copy(const z_owned_bytes_map_t *this_, z_loaned_bytes_t *key, z_loaned_bytes_t *value);
+
 /**
- * Iterates over the key-value pairs in the map.
+ * Iterate over the key-value pairs in the map.
  *
  * `body` will be called once per pair, with `ctx` as its last argument.
- * If `body` returns a non-zero value, the iteration will stop immediately and the value will be returned.
+ * If `body` Return a non-zero value, the iteration will stop immediately and the value will be returned.
  * Otherwise, this will return 0 once all pairs have been visited.
  * `body` is not given ownership of the key nor value, which alias the pairs in the map.
  * It is safe to keep these aliases until existing keys are modified/removed, or the map is destroyed.
@@ -719,20 +708,22 @@ void z_bytes_map_insert_by_copy(const z_owned_bytes_map_t *this_, z_loaned_bytes
  */
 
 int8_t z_bytes_map_iter(const z_owned_bytes_map_t *this_, z_attachment_iter_body_t body, void *ctx);
+
 /**
- * Constructs a new map.
+ * Build a new map.
  */
 // TODO(sashacmc): z_bytes_map_new for attachment
 z_owned_bytes_map_t z_bytes_map_new(void);
+
 /**
- * Constructs the gravestone value for `z_owned_bytes_map_t`
+ * Initialize a `z_owned_bytes_map_t`
  */
 // TODO(sashacmc): z_bytes_map_null for attachment
 z_owned_bytes_map_t z_bytes_map_null(void);
 #endif
 
 /**
- * Returns a view of `str` using `strlen` (this constructor should not be used on untrusted input).
+ * Return a view of `str` using `strlen` (this constructor should not be used on untrusted input).
  *
  * `str == NULL` will cause this to return `z_bytes_null()`
  */
