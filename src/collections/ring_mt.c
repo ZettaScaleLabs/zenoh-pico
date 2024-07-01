@@ -47,8 +47,8 @@ _z_ring_mt_t *_z_ring_mt_new(size_t capacity) {
 
 void _z_ring_mt_clear(_z_ring_mt_t *ring, z_element_free_f free_f) {
 #if Z_FEATURE_MULTI_THREAD == 1
-    z_mutex_drop(&ring->_mutex);
-    z_condvar_drop(&ring->_cv_not_empty);
+    z_mutex_drop(z_mutex_move(&ring->_mutex));
+    z_condvar_drop(z_condvar_move(&ring->_cv_not_empty));
 #endif
 
     _z_ring_clear(&ring->_ring, free_f);

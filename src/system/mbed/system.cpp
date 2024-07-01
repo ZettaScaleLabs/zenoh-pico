@@ -97,7 +97,7 @@ int8_t z_condvar_drop(z_owned_condvar_t *cv) {
 }
 
 int8_t z_condvar_signal(z_loaned_condvar_t *cv) {
-    ((ConditionVariable *)cv->_val)->notify_all();
+    ((ConditionVariable *)*cv)->notify_all();
     return 0;
 }
 

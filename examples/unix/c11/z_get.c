@@ -26,7 +26,7 @@ void reply_dropper(void *ctx) {
     (void)(ctx);
     printf(">> Received query final notification\n");
     z_condvar_signal(z_loan_mut(cond));
-    z_condvar_drop(&cond);
+    z_drop(z_move(cond));
 }
 
 void reply_handler(const z_loaned_reply_t *reply, void *ctx) {

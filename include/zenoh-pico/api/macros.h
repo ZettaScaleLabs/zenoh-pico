@@ -219,6 +219,8 @@
                   z_owned_slice_t : z_slice_move,                                 \
                   z_owned_bytes_t : z_bytes_move,                                 \
                   z_owned_encoding_t : z_encoding_move,                           \
+                  z_owned_mutex_t : z_mutex_move,                                 \
+                  z_owned_condvar_t : z_condvar_move,                             \
                   z_owned_ring_handler_query_t : z_ring_handler_query_move,       \
                   z_owned_ring_handler_reply_t : z_ring_handler_reply_move,       \
                   z_owned_ring_handler_sample_t : z_ring_handler_sample_move,     \

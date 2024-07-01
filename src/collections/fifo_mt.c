@@ -50,9 +50,9 @@ _z_fifo_mt_t *_z_fifo_mt_new(size_t capacity) {
 
 void _z_fifo_mt_clear(_z_fifo_mt_t *fifo, z_element_free_f free_f) {
 #if Z_FEATURE_MULTI_THREAD == 1
-    z_mutex_drop(&fifo->_mutex);
-    z_condvar_drop(&fifo->_cv_not_full);
-    z_condvar_drop(&fifo->_cv_not_empty);
+    z_mutex_drop(z_mutex_move(&fifo->_mutex));
+    z_condvar_drop(z_condvar_move(&fifo->_cv_not_full));
+    z_condvar_drop(z_condvar_move(&fifo->_cv_not_empty));
 #endif
 
     _z_fifo_clear(&fifo->_fifo, free_f);

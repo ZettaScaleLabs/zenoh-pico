@@ -37,7 +37,7 @@ void callback(const z_loaned_sample_t* sample, void* context) {
 }
 void drop(void* context) {
     (void)context;
-    z_condvar_drop(&cond);
+    z_drop(z_move(cond));
 }
 
 struct args_t {
