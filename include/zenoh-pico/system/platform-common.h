@@ -61,6 +61,12 @@ void *z_malloc(size_t size);
 void *z_realloc(void *ptr, size_t size);
 void z_free(void *ptr);
 
+#if Z_FEATURE_MULTI_THREAD == 0
+// dummy types for correct macros work
+typedef void *_z_mutex_t;
+typedef void *_z_condvar_t;
+#endif
+
 /*------------------ Thread ------------------*/
 int8_t z_task_init(z_task_t *task, z_task_attr_t *attr, void *(*fun)(void *), void *arg);
 int8_t z_task_join(z_task_t *task);
