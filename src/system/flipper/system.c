@@ -98,7 +98,7 @@ void z_task_free(z_task_t** task) {
 }
 
 /*------------------ Mutex ------------------*/
-int8_t z_mutex_init(z_mutex_t* m) {
+int8_t z_mutex_init(z_owned_mutex_t* m) {
     if (m == NULL) {
         return -1;
     }
@@ -106,7 +106,7 @@ int8_t z_mutex_init(z_mutex_t* m) {
     return (*m != 0) ? _Z_RES_OK : _Z_ERR_SYSTEM_TASK_FAILED;
 }
 
-int8_t z_mutex_free(z_mutex_t* m) {
+int8_t z_mutex_drop(z_owned_mutex_t* m) {
     if (m == NULL) {
         return -1;
     }
@@ -118,7 +118,7 @@ int8_t z_mutex_free(z_mutex_t* m) {
     return 0;
 }
 
-int8_t z_mutex_lock(z_mutex_t* m) {
+int8_t z_mutex_lock(z_loaned_mutex_t* m) {
     if (m == NULL) {
         return -1;
     }
@@ -128,9 +128,9 @@ int8_t z_mutex_lock(z_mutex_t* m) {
     return furi_mutex_acquire(*m, FuriWaitForever);
 }
 
-int8_t z_mutex_trylock(z_mutex_t* m) { return -1; }
+int8_t z_mutex_try_lock(z_loaned_mutex_t* m) { return -1; }
 
-int8_t z_mutex_unlock(z_mutex_t* m) {
+int8_t z_mutex_unlock(z_loaned_mutex_t* m) {
     if (m == NULL) {
         return -1;
     }
@@ -147,7 +147,7 @@ int8_t z_condvar_free(z_condvar_t* cv) { return -1; }
 
 int8_t z_condvar_signal(z_condvar_t* cv) { return -1; }
 
-int8_t z_condvar_wait(z_condvar_t* cv, z_mutex_t* m) { return -1; }
+int8_t z_condvar_wait(z_condvar_t* cv, z_loaned_mutex_t* m) { return -1; }
 
 /*------------------ Sleep ------------------*/
 int z_sleep_us(size_t time) {

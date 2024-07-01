@@ -53,6 +53,7 @@
                   z_owned_slice_t : z_slice_loan,                             \
                   z_owned_bytes_t : z_bytes_loan,                             \
                   z_owned_encoding_t : z_encoding_loan,                       \
+                  z_owned_mutex_t : z_mutex_loan,                             \
                   z_owned_fifo_handler_query_t : z_fifo_handler_query_loan,   \
                   z_owned_fifo_handler_reply_t : z_fifo_handler_reply_loan,   \
                   z_owned_fifo_handler_sample_t : z_fifo_handler_sample_loan, \
@@ -78,6 +79,7 @@
                   z_owned_query_t : z_query_loan_mut,                     \
                   z_owned_slice_t : z_slice_loan_mut,                     \
                   z_owned_bytes_t : z_bytes_loan_mut,                     \
+                  z_owned_mutex_t : z_mutex_loan_mut,                     \
                   z_owned_reply_err_t : z_reply_err_loan_mut              \
             )(&x)
 /**
@@ -108,13 +110,14 @@
                   z_owned_closure_reply_t * : z_closure_reply_drop,                 \
                   z_owned_closure_hello_t * : z_closure_hello_drop,                 \
                   z_owned_closure_zid_t * : z_closure_zid_drop,                     \
+                  z_owned_mutex_t *: z_mutex_drop,                                  \
                   z_owned_fifo_handler_query_t * : z_fifo_handler_query_drop,       \
                   z_owned_fifo_handler_reply_t * : z_fifo_handler_reply_drop,       \
                   z_owned_fifo_handler_sample_t * : z_fifo_handler_sample_drop,     \
                   z_owned_ring_handler_query_t * : z_ring_handler_query_drop,       \
                   z_owned_ring_handler_reply_t * : z_ring_handler_reply_drop,       \
                   z_owned_ring_handler_sample_t * : z_ring_handler_sample_drop,     \
-                  z_owned_reply_err_t : z_reply_err_drop                            \
+                  z_owned_reply_err_t * : z_reply_err_drop                          \
             )(x)
 
 /**

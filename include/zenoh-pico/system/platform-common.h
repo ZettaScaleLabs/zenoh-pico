@@ -17,6 +17,7 @@
 
 #include <stdint.h>
 
+#include "zenoh-pico/api/olv_macros.h"
 #include "zenoh-pico/config.h"
 
 #if defined(ZENOH_LINUX) || defined(ZENOH_MACOS) || defined(ZENOH_BSD)
@@ -68,19 +69,23 @@ int8_t zp_task_cancel(z_task_t *task);
 void z_task_free(z_task_t **task);
 
 /*------------------ Mutex ------------------*/
-int8_t z_mutex_init(z_mutex_t *m);
-int8_t z_mutex_free(z_mutex_t *m);
+_Z_OWNED_TYPE_VALUE(_z_mutex_t, mutex)
+_Z_LOANED_TYPE(_z_mutex_t, mutex)
+_Z_OWNED_FUNCTIONS_SYSTEM_DEF(mutex)
 
-int8_t z_mutex_lock(z_mutex_t *m);
-int8_t z_mutex_trylock(z_mutex_t *m);
-int8_t z_mutex_unlock(z_mutex_t *m);
+int8_t z_mutex_init(z_owned_mutex_t *m);
+int8_t z_mutex_drop(z_owned_mutex_t *m);
+
+int8_t z_mutex_lock(z_loaned_mutex_t *m);
+int8_t z_mutex_try_lock(z_loaned_mutex_t *m);
+int8_t z_mutex_unlock(z_loaned_mutex_t *m);
 
 /*------------------ CondVar ------------------*/
 int8_t z_condvar_init(z_condvar_t *cv);
 int8_t z_condvar_free(z_condvar_t *cv);
 
 int8_t z_condvar_signal(z_condvar_t *cv);
-int8_t z_condvar_wait(z_condvar_t *cv, z_mutex_t *m);
+int8_t z_condvar_wait(z_condvar_t *cv, z_loaned_mutex_t *m);
 #endif  // Z_FEATURE_MULTI_THREAD == 1
 
 /*------------------ Sleep ------------------*/

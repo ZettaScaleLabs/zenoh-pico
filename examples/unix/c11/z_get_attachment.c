@@ -44,7 +44,7 @@ typedef struct kv_pairs_rx_t {
 
 #if Z_FEATURE_QUERY == 1 && Z_FEATURE_MULTI_THREAD == 1
 static z_condvar_t cond;
-static z_mutex_t mutex;
+static z_owned_mutex_t mutex;
 
 _Bool create_attachment_iter(z_owned_bytes_t *kv_pair, void *context) {
     kv_pairs_tx_t *kvs = (kv_pairs_tx_t *)(context);
@@ -194,7 +194,7 @@ int main(int argc, char **argv) {
         return -1;
     }
 
-    z_mutex_lock(&mutex);
+    z_mutex_lock(z_loan_mut(mutex));
     printf("Sending Query '%s'...\n", keyexpr);
     z_get_options_t opts;
     z_get_options_default(&opts);
@@ -219,8 +219,8 @@ int main(int argc, char **argv) {
         printf("Unable to send query.\n");
         return -1;
     }
-    z_condvar_wait(&cond, &mutex);
-    z_mutex_unlock(&mutex);
+    z_condvar_wait(&cond, z_loan_mut(mutex));
+    z_mutex_unlock(z_loan_mut(mutex));
 
     // Stop read and lease tasks for zenoh-pico
     zp_stop_read_task(z_loan_mut(s));

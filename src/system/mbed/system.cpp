@@ -66,24 +66,24 @@ void z_task_free(z_task_t **task) {
 }
 
 /*------------------ Mutex ------------------*/
-int8_t z_mutex_init(z_mutex_t *m) {
+int8_t z_mutex_init(z_owned_mutex_t *m) {
     *m = new Mutex();
     return 0;
 }
 
-int8_t z_mutex_free(z_mutex_t *m) {
+int8_t z_mutex_drop(z_owned_mutex_t *m) {
     delete ((Mutex *)*m);
     return 0;
 }
 
-int8_t z_mutex_lock(z_mutex_t *m) {
+int8_t z_mutex_lock(z_loaned_mutex_t *m) {
     ((Mutex *)*m)->lock();
     return 0;
 }
 
-int8_t z_mutex_trylock(z_mutex_t *m) { return (((Mutex *)*m)->trylock() == true) ? 0 : -1; }
+int8_t z_mutex_try_lock(z_loaned_mutex_t *m) { return (((Mutex *)*m)->trylock() == true) ? 0 : -1; }
 
-int8_t z_mutex_unlock(z_mutex_t *m) {
+int8_t z_mutex_unlock(z_loaned_mutex_t *m) {
     ((Mutex *)*m)->unlock();
     return 0;
 }
@@ -101,7 +101,7 @@ int8_t z_condvar_signal(z_condvar_t *cv) {
     return 0;
 }
 
-int8_t z_condvar_wait(z_condvar_t *cv, z_mutex_t *m) {
+int8_t z_condvar_wait(z_condvar_t *cv, z_loaned_mutex_t *m) {
     *cv = new ConditionVariable(*((Mutex *)*m));
     ((ConditionVariable *)*cv)->wait();
     return 0;

@@ -90,25 +90,25 @@ void z_task_free(z_task_t **task) {
 }
 
 /*------------------ Mutex ------------------*/
-int8_t z_mutex_init(z_mutex_t *m) {
+int8_t z_mutex_init(z_owned_mutex_t *m) {
     int8_t ret = _Z_RES_OK;
     InitializeSRWLock(m);
     return ret;
 }
 
-int8_t z_mutex_free(z_mutex_t *m) {
+int8_t z_mutex_drop(z_owned_mutex_t *m) {
     (void)(m);
     int8_t ret = _Z_RES_OK;
     return ret;
 }
 
-int8_t z_mutex_lock(z_mutex_t *m) {
+int8_t z_mutex_lock(z_loaned_mutex_t *m) {
     int8_t ret = _Z_RES_OK;
     AcquireSRWLockExclusive(m);
     return ret;
 }
 
-int8_t z_mutex_trylock(z_mutex_t *m) {
+int8_t z_mutex_try_lock(z_loaned_mutex_t *m) {
     int8_t ret = _Z_RES_OK;
     if (TryAcquireSRWLockExclusive(m) == 0) {
         ret = _Z_ERR_GENERIC;
@@ -116,7 +116,7 @@ int8_t z_mutex_trylock(z_mutex_t *m) {
     return ret;
 }
 
-int8_t z_mutex_unlock(z_mutex_t *m) {
+int8_t z_mutex_unlock(z_loaned_mutex_t *m) {
     int8_t ret = _Z_RES_OK;
     ReleaseSRWLockExclusive(m);
     return ret;
@@ -141,7 +141,7 @@ int8_t z_condvar_signal(z_condvar_t *cv) {
     return ret;
 }
 
-int8_t z_condvar_wait(z_condvar_t *cv, z_mutex_t *m) {
+int8_t z_condvar_wait(z_condvar_t *cv, z_loaned_mutex_t *m) {
     int8_t ret = _Z_RES_OK;
     SleepConditionVariableSRW(cv, m, INFINITE, 0);
     return ret;

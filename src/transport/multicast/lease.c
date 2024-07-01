@@ -99,7 +99,7 @@ void *_zp_multicast_lease_task(void *ztm_arg) {
 
     _z_transport_peer_entry_list_t *it = NULL;
     while (ztm->_lease_task_running == true) {
-        z_mutex_lock(&ztm->_mutex_peer);
+        z_mutex_lock(z_mutex_loan_mut(&ztm->_mutex_peer));
 
         if (next_lease <= 0) {
             it = ztm->_peers;
@@ -157,13 +157,13 @@ void *_zp_multicast_lease_task(void *ztm_arg) {
             }
         }
 
-        z_mutex_unlock(&ztm->_mutex_peer);
+        z_mutex_unlock(z_mutex_loan_mut(&ztm->_mutex_peer));
 
         // The keep alive and lease intervals are expressed in milliseconds
         z_sleep_ms((size_t)interval);
 
         // Decrement all intervals
-        z_mutex_lock(&ztm->_mutex_peer);
+        z_mutex_lock(z_mutex_loan_mut(&ztm->_mutex_peer));
 
         it = ztm->_peers;
         while (it != NULL) {
@@ -181,7 +181,7 @@ void *_zp_multicast_lease_task(void *ztm_arg) {
         next_keep_alive = next_keep_alive - interval;
         next_join = next_join - interval;
 
-        z_mutex_unlock(&ztm->_mutex_peer);
+        z_mutex_unlock(z_mutex_loan_mut(&ztm->_mutex_peer));
     }
     return 0;
 }

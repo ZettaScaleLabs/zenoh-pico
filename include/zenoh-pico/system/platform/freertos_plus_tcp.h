@@ -35,7 +35,7 @@ typedef struct {
     EventGroupHandle_t join_event;
 } z_task_t;
 
-typedef SemaphoreHandle_t z_mutex_t;
+typedef SemaphoreHandle_t _z_mutex_t;
 typedef void *z_condvar_t;
 #endif  // Z_MULTI_THREAD == 1
 

@@ -69,8 +69,8 @@ typedef struct {
 
 #if Z_FEATURE_MULTI_THREAD == 1
     // TX and RX mutexes
-    z_mutex_t _mutex_rx;
-    z_mutex_t _mutex_tx;
+    z_owned_mutex_t _mutex_rx;
+    z_owned_mutex_t _mutex_tx;
 #endif  // Z_FEATURE_MULTI_THREAD == 1
 
     _z_link_t _link;
@@ -112,11 +112,11 @@ typedef struct _z_transport_multicast_t {
 
 #if Z_FEATURE_MULTI_THREAD == 1
     // TX and RX mutexes
-    z_mutex_t _mutex_rx;
-    z_mutex_t _mutex_tx;
+    z_owned_mutex_t _mutex_rx;
+    z_owned_mutex_t _mutex_tx;
 
     // Peer list mutex
-    z_mutex_t _mutex_peer;
+    z_owned_mutex_t _mutex_peer;
 #endif  // Z_FEATURE_MULTI_THREAD == 1
 
     _z_link_t _link;

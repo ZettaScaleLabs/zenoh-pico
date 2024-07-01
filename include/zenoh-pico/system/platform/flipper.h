@@ -29,7 +29,7 @@
 #if Z_FEATURE_MULTI_THREAD == 1
 typedef FuriThread* z_task_t;
 typedef uint32_t z_task_attr_t;
-typedef FuriMutex* z_mutex_t;
+typedef FuriMutex* _z_mutex_t;
 typedef void* z_condvar_t;
 #endif  // Z_FEATURE_MULTI_THREAD == 1
 
