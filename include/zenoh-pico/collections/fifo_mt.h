@@ -25,8 +25,8 @@ typedef struct {
     _z_fifo_t _fifo;
 #if Z_FEATURE_MULTI_THREAD == 1
     z_owned_mutex_t _mutex;
-    z_condvar_t _cv_not_full;
-    z_condvar_t _cv_not_empty;
+    z_owned_condvar_t _cv_not_full;
+    z_owned_condvar_t _cv_not_empty;
 #endif
 } _z_fifo_mt_t;
 

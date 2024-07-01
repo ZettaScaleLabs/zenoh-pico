@@ -80,11 +80,15 @@ int8_t z_mutex_try_lock(z_loaned_mutex_t *m);
 int8_t z_mutex_unlock(z_loaned_mutex_t *m);
 
 /*------------------ CondVar ------------------*/
-int8_t z_condvar_init(z_condvar_t *cv);
-int8_t z_condvar_free(z_condvar_t *cv);
+_Z_OWNED_TYPE_VALUE(_z_condvar_t, condvar)
+_Z_LOANED_TYPE(_z_condvar_t, condvar)
+_Z_OWNED_FUNCTIONS_SYSTEM_DEF(condvar)
 
-int8_t z_condvar_signal(z_condvar_t *cv);
-int8_t z_condvar_wait(z_condvar_t *cv, z_loaned_mutex_t *m);
+int8_t z_condvar_init(z_owned_condvar_t *cv);
+int8_t z_condvar_drop(z_owned_condvar_t *cv);
+
+int8_t z_condvar_signal(z_loaned_condvar_t *cv);
+int8_t z_condvar_wait(z_loaned_condvar_t *cv, z_loaned_mutex_t *m);
 
 /*------------------ Sleep ------------------*/
 int z_sleep_us(size_t time);

@@ -27,17 +27,17 @@
 #define DEFAULT_PING_NB 100
 #define DEFAULT_WARMUP_MS 1000
 
-static z_condvar_t cond;
+static z_owned_condvar_t cond;
 static z_owned_mutex_t mutex;
 
 void callback(const z_loaned_sample_t* sample, void* context) {
     (void)sample;
     (void)context;
-    z_condvar_signal(&cond);
+    z_condvar_signal(z_loan_mut(cond));
 }
 void drop(void* context) {
     (void)context;
-    z_condvar_free(&cond);
+    z_condvar_drop(&cond);
 }
 
 struct args_t {
@@ -111,7 +111,7 @@ int main(int argc, char** argv) {
             z_bytes_serialize_from_slice(&payload, data, args.size);
 
             z_publisher_put(z_loan(pub), z_move(payload), NULL);
-            z_condvar_wait(&cond, z_loan_mut(mutex));
+            z_condvar_wait(z_loan_mut(cond), z_loan_mut(mutex));
             elapsed_us = z_clock_elapsed_us(&warmup_start);
         }
     }
@@ -123,7 +123,7 @@ int main(int argc, char** argv) {
         z_bytes_serialize_from_slice(&payload, data, args.size);
 
         z_publisher_put(z_loan(pub), z_move(payload), NULL);
-        z_condvar_wait(&cond, z_loan_mut(mutex));
+        z_condvar_wait(z_loan_mut(cond), z_loan_mut(mutex));
         results[i] = z_clock_elapsed_us(&measure_start);
     }
     for (unsigned int i = 0; i < args.number_of_pings; i++) {

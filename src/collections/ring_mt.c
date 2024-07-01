@@ -48,7 +48,7 @@ _z_ring_mt_t *_z_ring_mt_new(size_t capacity) {
 void _z_ring_mt_clear(_z_ring_mt_t *ring, z_element_free_f free_f) {
 #if Z_FEATURE_MULTI_THREAD == 1
     z_mutex_drop(&ring->_mutex);
-    z_condvar_free(&ring->_cv_not_empty);
+    z_condvar_drop(&ring->_cv_not_empty);
 #endif
 
     _z_ring_clear(&ring->_ring, free_f);
@@ -74,7 +74,7 @@ int8_t _z_ring_mt_push(const void *elem, void *context, z_element_free_f element
     _z_ring_push_force_drop(&r->_ring, (void *)elem, element_free);
 
 #if Z_FEATURE_MULTI_THREAD == 1
-    _Z_RETURN_IF_ERR(z_condvar_signal(&r->_cv_not_empty))
+    _Z_RETURN_IF_ERR(z_condvar_signal(z_condvar_loan_mut(&r->_cv_not_empty)))
     _Z_RETURN_IF_ERR(z_mutex_unlock(z_mutex_loan_mut(&r->_mutex)))
 #endif
     return _Z_RES_OK;
@@ -89,7 +89,7 @@ int8_t _z_ring_mt_pull(void *dst, void *context, z_element_move_f element_move) 
     while (src == NULL) {
         src = _z_ring_pull(&r->_ring);
         if (src == NULL) {
-            _Z_RETURN_IF_ERR(z_condvar_wait(&r->_cv_not_empty, z_mutex_loan_mut(&r->_mutex)))
+            _Z_RETURN_IF_ERR(z_condvar_wait(z_condvar_loan_mut(&r->_cv_not_empty), z_mutex_loan_mut(&r->_mutex)))
         }
     }
     _Z_RETURN_IF_ERR(z_mutex_unlock(z_mutex_loan_mut(&r->_mutex)))

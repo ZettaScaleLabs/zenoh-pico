@@ -87,13 +87,13 @@ int8_t z_mutex_try_lock(z_loaned_mutex_t *m) { return -1; }
 int8_t z_mutex_unlock(z_loaned_mutex_t *m) { return -1; }
 
 /*------------------ Condvar ------------------*/
-int8_t z_condvar_init(z_condvar_t *cv) { return -1; }
+int8_t z_condvar_init(z_owned_condvar_t *cv) { return -1; }
 
-int8_t z_condvar_free(z_condvar_t *cv) { return -1; }
+int8_t z_condvar_drop(z_owned_condvar_t *cv) { return -1; }
 
-int8_t z_condvar_signal(z_condvar_t *cv) { return -1; }
+int8_t z_condvar_signal(z_loaned_condvar_t *cv) { return -1; }
 
-int8_t z_condvar_wait(z_condvar_t *cv, z_loaned_mutex_t *m) { return -1; }
+int8_t z_condvar_wait(z_loaned_condvar_t *cv, z_loaned_mutex_t *m) { return -1; }
 #endif  // Z_FEATURE_MULTI_THREAD == 1
 
 /*------------------ Sleep ------------------*/

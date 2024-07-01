@@ -18,5 +18,6 @@
 #if Z_FEATURE_MULTI_THREAD == 1
 
 _Z_OWNED_FUNCTIONS_SYSTEM_IMPL(_z_mutex_t, mutex)
+_Z_OWNED_FUNCTIONS_SYSTEM_IMPL(_z_condvar_t, condvar)
 
 #endif  // Z_FEATURE_MULTI_THREAD == 1

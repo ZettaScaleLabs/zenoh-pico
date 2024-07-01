@@ -89,19 +89,19 @@ int8_t z_mutex_unlock(z_loaned_mutex_t *m) {
 }
 
 /*------------------ Condvar ------------------*/
-int8_t z_condvar_init(z_condvar_t *cv) { return 0; }
+int8_t z_condvar_init(z_owned_condvar_t *cv) { return 0; }
 
-int8_t z_condvar_free(z_condvar_t *cv) {
-    delete ((ConditionVariable *)*cv);
+int8_t z_condvar_drop(z_owned_condvar_t *cv) {
+    delete ((ConditionVariable *)cv->_val);
     return 0;
 }
 
-int8_t z_condvar_signal(z_condvar_t *cv) {
-    ((ConditionVariable *)*cv)->notify_all();
+int8_t z_condvar_signal(z_loaned_condvar_t *cv) {
+    ((ConditionVariable *)cv->_val)->notify_all();
     return 0;
 }
 
-int8_t z_condvar_wait(z_condvar_t *cv, z_loaned_mutex_t *m) {
+int8_t z_condvar_wait(z_loaned_condvar_t *cv, z_loaned_mutex_t *m) {
     *cv = new ConditionVariable(*((Mutex *)*m));
     ((ConditionVariable *)*cv)->wait();
     return 0;

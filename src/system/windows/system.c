@@ -123,25 +123,25 @@ int8_t z_mutex_unlock(z_loaned_mutex_t *m) {
 }
 
 /*------------------ Condvar ------------------*/
-int8_t z_condvar_init(z_condvar_t *cv) {
+int8_t z_condvar_init(z_owned_condvar_t *cv) {
     int8_t ret = _Z_RES_OK;
-    InitializeConditionVariable(cv);
+    InitializeConditionVariable(&cv->_val);
     return ret;
 }
 
-int8_t z_condvar_free(z_condvar_t *cv) {
+int8_t z_condvar_drop(z_owned_condvar_t *cv) {
     (void)(cv);
     int8_t ret = _Z_RES_OK;
     return ret;
 }
 
-int8_t z_condvar_signal(z_condvar_t *cv) {
+int8_t z_condvar_signal(z_loaned_condvar_t *cv) {
     int8_t ret = _Z_RES_OK;
     WakeConditionVariable(cv);
     return ret;
 }
 
-int8_t z_condvar_wait(z_condvar_t *cv, z_loaned_mutex_t *m) {
+int8_t z_condvar_wait(z_loaned_condvar_t *cv, z_loaned_mutex_t *m) {
     int8_t ret = _Z_RES_OK;
     SleepConditionVariableSRW(cv, m, INFINITE, 0);
     return ret;

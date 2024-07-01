@@ -24,7 +24,7 @@
 typedef void *z_task_t;
 typedef void *z_task_attr_t;
 typedef void *_z_mutex_t;
-typedef void *z_condvar_t;
+typedef void *_z_condvar_t;
 #endif  // Z_FEATURE_MULTI_THREAD == 1
 
 typedef struct timespec z_clock_t;
