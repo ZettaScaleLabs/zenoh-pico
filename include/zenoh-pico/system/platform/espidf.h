@@ -38,7 +38,7 @@ typedef struct {
 typedef struct {
     TaskHandle_t handle;
     EventGroupHandle_t join_event;
-} z_task_t;
+} _z_task_t;
 typedef pthread_mutex_t _z_mutex_t;
 typedef pthread_cond_t _z_condvar_t;
 #endif  // Z_FEATURE_MULTI_THREAD == 1

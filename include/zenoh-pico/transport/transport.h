@@ -96,8 +96,8 @@ typedef struct {
     volatile _z_zint_t _lease;
 
 #if Z_FEATURE_MULTI_THREAD == 1
-    z_task_t *_read_task;
-    z_task_t *_lease_task;
+    _z_task_t *_read_task;
+    _z_task_t *_lease_task;
     volatile _Bool _read_task_running;
     volatile _Bool _lease_task_running;
 #endif  // Z_FEATURE_MULTI_THREAD == 1
@@ -138,8 +138,8 @@ typedef struct _z_transport_multicast_t {
     _zp_f_send_tmsg _send_f;
 
 #if Z_FEATURE_MULTI_THREAD == 1
-    z_task_t *_read_task;
-    z_task_t *_lease_task;
+    _z_task_t *_read_task;
+    _z_task_t *_lease_task;
     volatile _Bool _read_task_running;
     volatile _Bool _lease_task_running;
 #endif  // Z_FEATURE_MULTI_THREAD == 1

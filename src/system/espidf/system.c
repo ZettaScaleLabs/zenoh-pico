@@ -74,7 +74,7 @@ static z_task_attr_t z_default_task_attr = {
 };
 
 /*------------------ Thread ------------------*/
-int8_t z_task_init(z_task_t *task, z_task_attr_t *arg_attr, void *(*fun)(void *), void *arg) {
+int8_t _z_task_init(_z_task_t *task, z_task_attr_t *arg_attr, void *(*fun)(void *), void *arg) {
     z_task_attr_t *attr = arg_attr;
     z_task_arg *z_arg = (z_task_arg *)z_malloc(sizeof(z_task_arg));
     if (z_arg == NULL) {
@@ -110,17 +110,17 @@ int8_t z_task_init(z_task_t *task, z_task_attr_t *arg_attr, void *(*fun)(void *)
     return 0;
 }
 
-int8_t z_task_join(z_task_t *task) {
+int8_t _z_task_join(_z_task_t *task) {
     xEventGroupWaitBits(task->join_event, 1, pdFALSE, pdFALSE, portMAX_DELAY);
     return 0;
 }
 
-int8_t z_task_cancel(z_task_t *task) {
+int8_t z_task_cancel(_z_task_t *task) {
     vTaskDelete(task->handle);
     return 0;
 }
 
-void z_task_free(z_task_t **task) {
+void _z_task_drop(_z_task_t **task) {
     z_free((*task)->join_event);
     z_free(*task);
 }

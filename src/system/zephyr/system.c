@@ -71,7 +71,7 @@ K_THREAD_STACK_ARRAY_DEFINE(thread_stack_area, Z_THREADS_NUM, Z_PTHREAD_STACK_SI
 static int thread_index = 0;
 
 /*------------------ Task ------------------*/
-int8_t z_task_init(z_task_t *task, z_task_attr_t *attr, void *(*fun)(void *), void *arg) {
+int8_t _z_task_init(_z_task_t *task, z_task_attr_t *attr, void *(*fun)(void *), void *arg) {
     z_task_attr_t *lattr = NULL;
     z_task_attr_t tmp;
     if (attr == NULL) {
@@ -83,12 +83,12 @@ int8_t z_task_init(z_task_t *task, z_task_attr_t *attr, void *(*fun)(void *), vo
     return pthread_create(task, lattr, fun, arg);
 }
 
-int8_t z_task_join(z_task_t *task) { return pthread_join(*task, NULL); }
+int8_t _z_task_join(_z_task_t *task) { return pthread_join(*task, NULL); }
 
-int8_t zp_task_cancel(z_task_t *task) { return pthread_cancel(*task); }
+int8_t _z_task_cancel(_z_task_t *task) { return pthread_cancel(*task); }
 
-void z_task_free(z_task_t **task) {
-    z_task_t *ptr = *task;
+void _z_task_drop(_z_task_t **task) {
+    _z_task_t *ptr = *task;
     z_free(ptr);
     *task = NULL;
 }

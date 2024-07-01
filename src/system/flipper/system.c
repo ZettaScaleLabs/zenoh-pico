@@ -62,7 +62,7 @@ void z_free(void* ptr) { return free(ptr); }
 
 /*------------------ Task ------------------*/
 
-int8_t z_task_init(z_task_t* task, z_task_attr_t* attr, void* (*fun)(void*), void* arg) {
+int8_t _z_task_init(_z_task_t* task, z_task_attr_t* attr, void* (*fun)(void*), void* arg) {
     if (task == NULL) {
         return -1;
     }
@@ -80,16 +80,16 @@ int8_t z_task_init(z_task_t* task, z_task_attr_t* attr, void* (*fun)(void*), voi
     return _Z_RES_OK;
 }
 
-int8_t z_task_join(z_task_t* task) {
+int8_t _z_task_join(_z_task_t* task) {
     if (task == NULL) {
         return -1;
     }
     return furi_thread_join(*task);
 }
 
-int8_t zp_task_cancel(z_task_t* task) { return -1; }
+int8_t _z_task_cancel(_z_task_t* task) { return -1; }
 
-void z_task_free(z_task_t** task) {
+void _z_task_drop(_z_task_t** task) {
     if (task == NULL || *task == NULL) {
         return;
     }
