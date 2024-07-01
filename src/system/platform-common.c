@@ -15,4 +15,8 @@
 
 #include "zenoh-pico/api/olv_macros.h"
 
+#if Z_FEATURE_MULTI_THREAD == 1
+
 _Z_OWNED_FUNCTIONS_SYSTEM_IMPL(_z_mutex_t, mutex)
+
+#endif  // Z_FEATURE_MULTI_THREAD == 1

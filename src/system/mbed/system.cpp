@@ -67,12 +67,12 @@ void z_task_free(z_task_t **task) {
 
 /*------------------ Mutex ------------------*/
 int8_t z_mutex_init(z_owned_mutex_t *m) {
-    *m = new Mutex();
+    m->_val = new Mutex();
     return 0;
 }
 
 int8_t z_mutex_drop(z_owned_mutex_t *m) {
-    delete ((Mutex *)*m);
+    delete ((Mutex *)m->_val);
     return 0;
 }
 

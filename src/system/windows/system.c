@@ -92,7 +92,7 @@ void z_task_free(z_task_t **task) {
 /*------------------ Mutex ------------------*/
 int8_t z_mutex_init(z_owned_mutex_t *m) {
     int8_t ret = _Z_RES_OK;
-    InitializeSRWLock(m);
+    InitializeSRWLock(&m->_val);
     return ret;
 }
 

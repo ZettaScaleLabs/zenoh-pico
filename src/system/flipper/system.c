@@ -102,19 +102,19 @@ int8_t z_mutex_init(z_owned_mutex_t* m) {
     if (m == NULL) {
         return -1;
     }
-    *m = furi_mutex_alloc(FuriMutexTypeRecursive);
-    return (*m != 0) ? _Z_RES_OK : _Z_ERR_SYSTEM_TASK_FAILED;
+    m->_val = furi_mutex_alloc(FuriMutexTypeRecursive);
+    return (m->_val != 0) ? _Z_RES_OK : _Z_ERR_SYSTEM_TASK_FAILED;
 }
 
 int8_t z_mutex_drop(z_owned_mutex_t* m) {
     if (m == NULL) {
         return -1;
     }
-    if (*m == 0) {
+    if (m->_val == 0) {
         return 0;
     }
-    furi_mutex_free(*m);
-    *m = NULL;
+    furi_mutex_free(m->_val);
+    m->_val = NULL;
     return 0;
 }
 

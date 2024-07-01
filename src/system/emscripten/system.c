@@ -59,9 +59,9 @@ void z_task_free(z_task_t **task) {
 }
 
 /*------------------ Mutex ------------------*/
-int8_t z_mutex_init(z_owned_mutex_t *m) { return pthread_mutex_init(m, 0); }
+int8_t z_mutex_init(z_owned_mutex_t *m) { return pthread_mutex_init(&m->_val, 0); }
 
-int8_t z_mutex_drop(z_owned_mutex_t *m) { return pthread_mutex_destroy(m); }
+int8_t z_mutex_drop(z_owned_mutex_t *m) { return pthread_mutex_destroy(&m->_val); }
 
 int8_t z_mutex_lock(z_loaned_mutex_t *m) { return pthread_mutex_lock(m); }
 
