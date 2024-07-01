@@ -61,7 +61,6 @@ void *z_malloc(size_t size);
 void *z_realloc(void *ptr, size_t size);
 void z_free(void *ptr);
 
-#if Z_FEATURE_MULTI_THREAD == 1
 /*------------------ Thread ------------------*/
 int8_t z_task_init(z_task_t *task, z_task_attr_t *attr, void *(*fun)(void *), void *arg);
 int8_t z_task_join(z_task_t *task);
@@ -86,7 +85,6 @@ int8_t z_condvar_free(z_condvar_t *cv);
 
 int8_t z_condvar_signal(z_condvar_t *cv);
 int8_t z_condvar_wait(z_condvar_t *cv, z_loaned_mutex_t *m);
-#endif  // Z_FEATURE_MULTI_THREAD == 1
 
 /*------------------ Sleep ------------------*/
 int z_sleep_us(size_t time);
