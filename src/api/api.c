@@ -117,7 +117,7 @@ int8_t z_keyexpr_as_view_string(const z_loaned_keyexpr_t *keyexpr, z_view_string
 int8_t z_keyexpr_concat(z_owned_keyexpr_t *key, const z_loaned_keyexpr_t *left, const char *right, size_t len) {
     z_internal_keyexpr_null(key);
     if (len == 0) {
-        return z_keyexpr_clone(key, left);
+        return _z_keyexpr_copy(&key->_val, left);
     } else if (right == NULL) {
         return _Z_ERR_INVALID;
     }
@@ -770,7 +770,7 @@ _Z_OWNED_FUNCTIONS_VALUE_IMPL(_z_string_t, string, _z_string_check, _z_string_nu
 _Bool _z_value_check(const _z_value_t *value) {
     return _z_encoding_check(&value->encoding) || _z_bytes_check(&value->payload);
 }
-_Z_OWNED_FUNCTIONS_VALUE_IMPL(_z_value_t, reply_err, _z_value_check, _z_value_null, _z_value_copy, _z_value_clear)
+_Z_OWNED_FUNCTIONS_VALUE_NO_COPY_IMPL(_z_value_t, reply_err, _z_value_check, _z_value_null, _z_value_clear)
 
 _Z_OWNED_FUNCTIONS_VALUE_IMPL(_z_keyexpr_t, keyexpr, _z_keyexpr_check, _z_keyexpr_null, _z_keyexpr_copy,
                               _z_keyexpr_clear)
@@ -778,7 +778,7 @@ _Z_VIEW_FUNCTIONS_IMPL(_z_keyexpr_t, keyexpr, _z_keyexpr_check, _z_keyexpr_null)
 _Z_VIEW_FUNCTIONS_IMPL(_z_string_t, string, _z_string_check, _z_string_null)
 _Z_VIEW_FUNCTIONS_IMPL(_z_slice_t, slice, _z_slice_check, _z_slice_empty)
 
-_Z_OWNED_FUNCTIONS_VALUE_IMPL(_z_hello_t, hello, _z_hello_check, _z_hello_null, _z_hello_copy, _z_hello_clear)
+_Z_OWNED_FUNCTIONS_VALUE_NO_COPY_IMPL(_z_hello_t, hello, _z_hello_check, _z_hello_null, _z_hello_clear)
 
 z_id_t z_hello_zid(const z_loaned_hello_t *hello) { return hello->_zid; }
 
@@ -814,8 +814,8 @@ int8_t _z_string_array_copy(_z_string_svec_t *dst, const _z_string_svec_t *src) 
     return dst->_len == src->_len ? _Z_RES_OK : _Z_ERR_SYSTEM_OUT_OF_MEMORY;
 }
 _z_string_svec_t _z_string_array_null(void) { return _z_string_svec_make(0); }
-_Z_OWNED_FUNCTIONS_VALUE_IMPL(_z_string_svec_t, string_array, _z_string_array_check, _z_string_array_null,
-                              _z_string_array_copy, _z_string_svec_clear)
+_Z_OWNED_FUNCTIONS_VALUE_NO_COPY_IMPL(_z_string_svec_t, string_array, _z_string_array_check, _z_string_array_null,
+                                      _z_string_svec_clear)
 _Z_OWNED_FUNCTIONS_VALUE_IMPL(_z_slice_t, slice, _z_slice_check, _z_slice_empty, _z_slice_copy, _z_slice_clear)
 _Z_OWNED_FUNCTIONS_VALUE_IMPL(_z_bytes_t, bytes, _z_bytes_check, _z_bytes_null, _z_bytes_copy, _z_bytes_drop)
 
