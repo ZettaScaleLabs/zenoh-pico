@@ -30,6 +30,7 @@ jobs:
       - name: Build & run tests
         run: |
           sudo apt install -y ninja-build
+          cmake -DASAN=ON -B build/ -G Ninja
           CMAKE_GENERATOR=Ninja make test
 
   check_format:
@@ -290,6 +291,7 @@ jobs:
       - name: Build & test pico
         run: |
           sudo apt install -y ninja-build
+          cmake -DASAN=ON -B build/ -G Ninja
           CMAKE_GENERATOR=Ninja make
           python3 ./build/tests/no_router.py
         timeout-minutes: 5
