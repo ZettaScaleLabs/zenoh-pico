@@ -18,7 +18,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "FreeRTOS_IP.h"
+#include "FreeRTOS.h"
 #include "zenoh-pico/config.h"
 #include "zenoh-pico/system/platform.h"
 
@@ -27,11 +27,7 @@ uint8_t z_random_u8(void) { return z_random_u32(); }
 
 uint16_t z_random_u16(void) { return z_random_u32(); }
 
-uint32_t z_random_u32(void) {
-    uint32_t ret = 0;
-    xApplicationGetRandomNumber(&ret);
-    return ret;
-}
+uint32_t z_random_u32(void) { return rand(); }
 
 uint64_t z_random_u64(void) {
     uint64_t ret = 0;
@@ -48,7 +44,12 @@ void z_random_fill(void *buf, size_t len) {
 }
 
 /*------------------ Memory ------------------*/
-void *z_malloc(size_t size) { return pvPortMalloc(size); }
+void *z_malloc(size_t size) {
+    if (!size) {
+        return NULL;
+    }
+    return pvPortMalloc(size);
+}
 
 void *z_realloc(void *ptr, size_t size) {
     // realloc not implemented in FreeRTOS
@@ -141,7 +142,7 @@ void _z_task_free(_z_task_t **task) {
 
 /*------------------ Mutex ------------------*/
 z_result_t _z_mutex_init(_z_mutex_t *m) {
-    *m = xSemaphoreCreateRecursiveMutex();
+    *m = xSemaphoreCreateMutex();
     return *m == NULL ? -1 : 0;
 }
 
@@ -150,11 +151,11 @@ z_result_t _z_mutex_drop(_z_mutex_t *m) {
     return 0;
 }
 
-z_result_t _z_mutex_lock(_z_mutex_t *m) { return xSemaphoreTakeRecursive(*m, portMAX_DELAY) == pdTRUE ? 0 : -1; }
+z_result_t _z_mutex_lock(_z_mutex_t *m) { return xSemaphoreTake(*m, portMAX_DELAY) == pdTRUE ? 0 : -1; }
 
-z_result_t _z_mutex_try_lock(_z_mutex_t *m) { return xSemaphoreTakeRecursive(*m, 0) == pdTRUE ? 0 : -1; }
+z_result_t _z_mutex_try_lock(_z_mutex_t *m) { return xSemaphoreTake(*m, 0) == pdTRUE ? 0 : -1; }
 
-z_result_t _z_mutex_unlock(_z_mutex_t *m) { return xSemaphoreGiveRecursive(*m) == pdTRUE ? 0 : -1; }
+z_result_t _z_mutex_unlock(_z_mutex_t *m) { return xSemaphoreGive(*m) == pdTRUE ? 0 : -1; }
 
 /*------------------ CondVar ------------------*/
 // Condition variables not supported in FreeRTOS

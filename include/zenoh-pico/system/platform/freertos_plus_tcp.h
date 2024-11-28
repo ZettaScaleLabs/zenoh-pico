@@ -15,7 +15,7 @@
 #define ZENOH_PICO_SYSTEM_FREERTOS_PLUS_TCP_TYPES_H
 
 #include "FreeRTOS.h"
-#include "FreeRTOS_IP.h"
+#include "event_groups.h"
 #include "semphr.h"
 
 #ifdef __cplusplus
