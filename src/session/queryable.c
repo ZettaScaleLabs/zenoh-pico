@@ -200,7 +200,7 @@ static z_result_t _z_session_queryable_get_infos(_z_session_t *zn, const _z_keye
     return _Z_RES_OK;
 }
 
-static z_result_t _z_trigger_queryables_inner(_z_session_rc_t *zsrc, _z_msg_query_t *msgq, const _z_keyexpr_t *q_key,
+static z_result_t _z_trigger_queryables_inner(_z_session_rc_t *zsrc, _z_msg_query_t *msgq, _z_keyexpr_t *q_key,
                                               uint32_t qid) {
     _z_session_t *zn = _Z_RC_IN_VAL(zsrc);
     _z_keyexpr_t key;
@@ -227,6 +227,14 @@ static z_result_t _z_trigger_queryables_inner(_z_session_rc_t *zsrc, _z_msg_quer
     _z_query_t q =
         _z_query_alias(&msgq->_ext_value, &key, &msgq->_parameters, zsrc, qid, &msgq->_ext_attachment, anyke);
     _z_query_rc_t query = _z_query_rc_new_from_val(&q);
+    if (_Z_RC_IS_NULL(&query)) {
+        return _Z_ERR_SYSTEM_OUT_OF_MEMORY;
+    }
+    // Clear values to avoid double free
+    *q_key = _z_keyexpr_null();
+    msgq->_ext_value = _z_value_null();
+    msgq->_ext_attachment = _z_bytes_null();
+    msgq->_parameters = _z_slice_null();
     // Parse session_queryable svec
     for (size_t i = 0; i < qle_nb; i++) {
         _z_queryable_infos_t *qle_info = _z_queryable_infos_svec_get(&qles, i);
