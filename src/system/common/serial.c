@@ -30,19 +30,21 @@ z_result_t _z_connect_serial(const _z_sys_net_socket_t sock) {
         uint8_t header = _Z_FLAG_SERIAL_INIT;
 
         _z_send_serial_internal(sock, header, NULL, 0);
-        z_sleep_ms(100);
-        size_t ret = _z_read_serial_internal(sock, &header, NULL, 0);
+        uint8_t tmp;
+        size_t ret = _z_read_serial_internal(sock, &header, &tmp, sizeof(tmp));
         if (ret == SIZE_MAX) {
             return _Z_ERR_TRANSPORT_RX_FAILED;
         }
 
         if (_Z_HAS_FLAG(header, _Z_FLAG_SERIAL_ACK) && _Z_HAS_FLAG(header, _Z_FLAG_SERIAL_INIT)) {
+            _Z_DEBUG("connected");
             break;
         } else if (_Z_HAS_FLAG(header, _Z_FLAG_SERIAL_RESET)) {
             z_sleep_ms(SERIAL_CONNECT_THROTTLE_TIME_MS);
+            _Z_DEBUG("reset");
             continue;
         } else {
-            _Z_ERROR("unknown header received: %02X\n", header);
+            _Z_ERROR("unknown header received: %02X", header);
             return _Z_ERR_TRANSPORT_RX_FAILED;
         }
     }
@@ -70,7 +72,7 @@ size_t _z_read_exact_serial(const _z_sys_net_socket_t sock, uint8_t *ptr, size_t
             break;
         }
 
-        n = n + rb;
+        n += rb;
         pos = _z_ptr_u8_offset(pos, n);
     } while (n != len);
 

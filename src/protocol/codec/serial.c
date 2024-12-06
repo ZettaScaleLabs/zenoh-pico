@@ -26,8 +26,9 @@
 
 size_t _z_serial_msg_serialize(uint8_t *dest, size_t dest_len, const uint8_t *src, size_t src_len, uint8_t header,
                                uint8_t *tmp_buf, size_t tmp_buf_len) {
-    if (tmp_buf_len < KIND_FIELD_LEN + LEN_FIELD_LEN + CRC32_LEN + src_len) {
-        _Z_DEBUG("tmp_buf too small");
+    size_t expected_size = src_len + KIND_FIELD_LEN + LEN_FIELD_LEN + CRC32_LEN;
+    if (tmp_buf_len < expected_size) {
+        _Z_DEBUG("tmp buffer too small: %zu < %zu", tmp_buf_len, expected_size);
         return SIZE_MAX;
     }
 
@@ -93,8 +94,8 @@ size_t _z_serial_msg_deserialize(const uint8_t *src, size_t src_len, uint8_t *ds
         return SIZE_MAX;
     }
 
-    if (wire_size > dst_len) {
-        _Z_DEBUG("destination buffer too small");
+    if (dst_len < wire_size) {
+        _Z_DEBUG("destination buffer too small: %zu < %u", dst_len, wire_size);
         return SIZE_MAX;
     }
 
@@ -104,7 +105,6 @@ size_t _z_serial_msg_deserialize(const uint8_t *src, size_t src_len, uint8_t *ds
     }
 
     uint32_t received_crc = tmp_buf_ptr[0] | (tmp_buf_ptr[1] << 8) | (tmp_buf_ptr[2] << 16) | (tmp_buf_ptr[3] << 24);
-    tmp_buf_ptr += CRC32_LEN;
 
     uint32_t computed_crc = _z_crc32(dst, wire_size);
     if (received_crc != computed_crc) {
