@@ -540,7 +540,7 @@ z_result_t _z_open_serial_from_dev(_z_sys_net_socket_t *sock, char *dev, uint32_
 #if Z_FEATURE_LINK_SERIAL_USB == 1
     if (strcmp("usb", dev) == 0) {
         _z_usb_uart_init();
-        return ret;
+        return _z_connect_serial(*sock);
     }
 #endif
 
