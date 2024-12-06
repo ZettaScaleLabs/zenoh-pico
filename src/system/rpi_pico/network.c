@@ -12,7 +12,6 @@
 //   ZettaScale Zenoh Team, <zenoh@zettascale.tech>
 //
 
-#include <stdio.h>
 #include <stdlib.h>
 
 #include "zenoh-pico/collections/string.h"
@@ -604,20 +603,17 @@ void _z_close_serial(_z_sys_net_socket_t *sock) {
 size_t _z_read_serial_internal(const _z_sys_net_socket_t sock, uint8_t *header, uint8_t *ptr, size_t len) {
     uint8_t *raw_buf = z_malloc(_Z_SERIAL_MAX_COBS_BUF_SIZE);
     size_t rb = 0;
-    printf("read serial: ");
     for (size_t i = 0; i < _Z_SERIAL_MAX_COBS_BUF_SIZE; i++) {
 #if Z_FEATURE_LINK_SERIAL_USB == 1
         raw_buf[i] = (sock._serial == NULL) ? _z_usb_uart_getc() : uart_getc(sock._serial);
 #else
         raw_buf[i] = uart_getc(sock._serial);
 #endif
-        printf("%02X", raw_buf[i]);
         rb++;
         if (raw_buf[i] == 0x00) {
             break;
         }
     }
-    printf(": %zu\n", rb);
 
     uint8_t *tmp_buf = z_malloc(_Z_SERIAL_MFS_SIZE);
     size_t ret = _z_serial_msg_deserialize(raw_buf, rb, ptr, len, header, tmp_buf, _Z_SERIAL_MFS_SIZE);
@@ -644,11 +640,6 @@ size_t _z_send_serial_internal(const _z_sys_net_socket_t sock, uint8_t header, c
     } else {
         uart_write_blocking(sock._serial, raw_buf, ret);
     }
-    printf("write serial: ");
-    for (int i = 0; i < ret; ++i) {
-        printf("%02X", raw_buf[i]);
-    }
-    printf(": %zu\n", ret);
 
     z_free(raw_buf);
     z_free(tmp_buf);
