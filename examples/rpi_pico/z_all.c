@@ -19,10 +19,10 @@
 #include "zenoh-pico/api/types.h"
 #include "zenoh-pico/system/common/platform.h"
 
-#define QUERY_COUNT 10
-#define PUBLICATION_COUNT 10
-#define QUERYABLE_COUNT 10
-#define SUBSCRIPTION_COUNT 10
+#define QUERY_COUNT 1
+#define PUBLICATION_COUNT 1
+#define QUERYABLE_COUNT 1
+#define SUBSCRIPTION_COUNT 1
 
 #define BASE_TIMEOUT_MS 1000
 
@@ -171,8 +171,8 @@ void app_main(void) {
 #endif
 
 #if Z_FEATURE_QUERYABLE == 1
-    z_view_keyexpr_t ke;
-    if (z_view_keyexpr_from_str(&ke, QUERYABLE_KEYEXPR) < 0) {
+    z_view_keyexpr_t qke;
+    if (z_view_keyexpr_from_str(&qke, QUERYABLE_KEYEXPR) < 0) {
         printf("%s is not a valid key expression", QUERYABLE_KEYEXPR);
         return;
     }
@@ -183,7 +183,7 @@ void app_main(void) {
         z_owned_closure_query_t callback;
         z_closure(&callback, query_handler, NULL, NULL);
         printf("Creating Queryable on '%s'...\n", QUERYABLE_KEYEXPR);
-        if (z_declare_queryable(z_loan(s), &qable[i], z_loan(ke), z_move(callback), NULL) < 0) {
+        if (z_declare_queryable(z_loan(s), &qable[i], z_loan(qke), z_move(callback), NULL) < 0) {
             printf("Unable to create queryable.\n");
             return;
         }
@@ -233,7 +233,7 @@ void app_main(void) {
 
 #if Z_FEATURE_PUBLICATION == 1
         for (size_t i = 0; i != PUBLICATION_COUNT; ++i) {
-            snprintf(buf, 256, "[%4d] %s", idx, PUBLICATION_VALUE);
+            snprintf(buf, 256, "[%4d][%4d] %s", i, idx, PUBLICATION_VALUE);
             printf("Putting Data ('%s': '%s')...\n", PUBLICATION_KEYEXPR, buf);
 
             // Create payload
