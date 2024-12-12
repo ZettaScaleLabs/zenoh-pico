@@ -1,8 +1,8 @@
-prefix=/usr/local
+prefix=/home/sashacmc/.local
 
 Name: zenohpico
 Description: 
 URL: 
-Version: 1.0.20241210dev
+Version: 1.0.20241212dev
 Cflags: -I${prefix}/include
 Libs: -L${prefix}/lib -lzenohpico
