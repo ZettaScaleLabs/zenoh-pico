@@ -16,7 +16,7 @@
 #include <stdbool.h>
 
 #include "zenoh-pico/link/link.h"
-#include "zenoh-pico/system/platform_common.h"
+#include "zenoh-pico/system/common/platform.h"
 #include "zenoh-pico/utils/result.h"
 
 void _z_common_transport_clear(_z_transport_common_t *ztc, bool detach_tasks) {

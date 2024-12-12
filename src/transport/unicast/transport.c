@@ -11,7 +11,7 @@
 // Contributors:
 //   ZettaScale Zenoh Team, <zenoh@zettascale.tech>
 
-#include "zenoh-pico/transport/common/transport.h"
+#include "zenoh-pico/transport/unicast/transport.h"
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -20,10 +20,10 @@
 #include <string.h>
 
 #include "zenoh-pico/link/link.h"
-#include "zenoh-pico/system/platform_common.h"
+#include "zenoh-pico/system/common/platform.h"
 #include "zenoh-pico/transport/common/rx.h"
+#include "zenoh-pico/transport/common/transport.h"
 #include "zenoh-pico/transport/common/tx.h"
-#include "zenoh-pico/transport/unicast/transport.h"
 #include "zenoh-pico/transport/utils.h"
 #include "zenoh-pico/utils/logging.h"
 

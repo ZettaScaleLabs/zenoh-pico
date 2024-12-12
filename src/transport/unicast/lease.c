@@ -15,7 +15,7 @@
 #include "zenoh-pico/transport/unicast/lease.h"
 
 #include "zenoh-pico/session/query.h"
-#include "zenoh-pico/system/platform_common.h"
+#include "zenoh-pico/system/common/platform.h"
 #include "zenoh-pico/transport/common/tx.h"
 #include "zenoh-pico/transport/transport.h"
 #include "zenoh-pico/transport/unicast/transport.h"
