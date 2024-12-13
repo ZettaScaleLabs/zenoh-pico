@@ -181,8 +181,8 @@ z_result_t _z_reopen(_z_session_rc_t *zn) {
         }
 
 #if Z_FEATURE_MULTI_THREAD == 1
-        // TODO: currnetly we can come to reopen only from task, so we can restart them
-        // but we have no original attributes (which currently in all known cases is default
+        // TODO (sashacmc): currnetly we can come to reopen only from task, so we can restart them
+        // but we have no original attributes (which currently for most cases is default)
         _zp_start_lease_task(_Z_RC_IN_VAL(zn), NULL);
         _zp_start_read_task(_Z_RC_IN_VAL(zn), NULL);
 #endif  // Z_FEATURE_MULTI_THREAD == 1
@@ -190,7 +190,7 @@ z_result_t _z_reopen(_z_session_rc_t *zn) {
         if (ret == _Z_RES_OK && !_z_network_message_list_is_empty(zs->_decalaration_cache)) {
             _z_network_message_list_t *iter = zs->_decalaration_cache;
             while (iter != NULL) {
-                _z_network_message_t *n_msg = _z_network_message_list_head(zs->_decalaration_cache);
+                _z_network_message_t *n_msg = _z_network_message_list_head(iter);
                 ret = _z_send_n_msg(_Z_RC_IN_VAL(zn), n_msg, Z_RELIABILITY_RELIABLE, Z_CONGESTION_CONTROL_BLOCK);
                 if (ret != _Z_RES_OK) {
                     _Z_DEBUG("Send message during reopen failed: %i", ret);
@@ -209,7 +209,7 @@ void _z_cache_declaration(_z_session_t *zs, const _z_network_message_t *n_msg) {
     if (_z_config_is_empty(&zs->_config)) {
         return;
     }
-    zs->_decalaration_cache = _z_network_message_list_push(zs->_decalaration_cache, _z_n_msg_clone(n_msg));
+    zs->_decalaration_cache = _z_network_message_list_push_back(zs->_decalaration_cache, _z_n_msg_clone(n_msg));
 }
 
 void _z_prune_declaration(_z_session_t *zs, const _z_network_message_t *n_msg) {

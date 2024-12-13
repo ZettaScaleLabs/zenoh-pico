@@ -137,7 +137,6 @@ def test_restart(router_command, client_command, timeout):
 
         print("Start router...")
         run_background(router_command, None, router_process_list)
-        time.sleep(timeout)
 
         if wait_message(client_output, CONNECT_MESSAGE):
             print("Connection restored successfully.")
