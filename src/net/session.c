@@ -21,6 +21,7 @@
 #include "zenoh-pico/collections/string.h"
 #include "zenoh-pico/config.h"
 #include "zenoh-pico/protocol/core.h"
+#include "zenoh-pico/protocol/definitions/declarations.h"
 #include "zenoh-pico/protocol/definitions/network.h"
 #include "zenoh-pico/session/utils.h"
 #include "zenoh-pico/transport/common/lease.h"
@@ -212,10 +213,49 @@ void _z_cache_declaration(_z_session_t *zs, const _z_network_message_t *n_msg) {
     zs->_decalaration_cache = _z_network_message_list_push_back(zs->_decalaration_cache, _z_n_msg_clone(n_msg));
 }
 
+#define _Z_CACHE_DECLARATION_UNDECLARE_FILTER(tp)                                                                     \
+    static bool _z_cache_declaration_undeclare_filter_##tp(const _z_network_message_t *left,                          \
+                                                           const _z_network_message_t *right) {                       \
+        return left->_body._declare._decl._body._undecl_##tp._id == right->_body._declare._decl._body._decl_##tp._id; \
+    }
+_Z_CACHE_DECLARATION_UNDECLARE_FILTER(kexpr)
+_Z_CACHE_DECLARATION_UNDECLARE_FILTER(subscriber)
+_Z_CACHE_DECLARATION_UNDECLARE_FILTER(queryable)
+_Z_CACHE_DECLARATION_UNDECLARE_FILTER(token)
+
 void _z_prune_declaration(_z_session_t *zs, const _z_network_message_t *n_msg) {
-    (void)zs;
-    (void)n_msg;
-    // TODO(sashacmc): implement
+    if (n_msg->_tag != _Z_N_DECLARE) {
+        _Z_ERROR("Invalid net message for _z_prune_declaration: %i", n_msg->_tag);
+        return;
+    }
+#ifdef Z_BUILD_DEBUG
+    size_t cnt_before = _z_network_message_list_len(zs->_decalaration_cache);
+#endif
+    const _z_declaration_t *decl = &n_msg->_body._declare._decl;
+    switch (decl->_tag) {
+        case _Z_UNDECL_KEXPR:
+            zs->_decalaration_cache = _z_network_message_list_drop_filter(
+                zs->_decalaration_cache, _z_cache_declaration_undeclare_filter_kexpr, n_msg);
+            break;
+        case _Z_UNDECL_SUBSCRIBER:
+            zs->_decalaration_cache = _z_network_message_list_drop_filter(
+                zs->_decalaration_cache, _z_cache_declaration_undeclare_filter_subscriber, n_msg);
+            break;
+        case _Z_UNDECL_QUERYABLE:
+            zs->_decalaration_cache = _z_network_message_list_drop_filter(
+                zs->_decalaration_cache, _z_cache_declaration_undeclare_filter_queryable, n_msg);
+            break;
+        case _Z_UNDECL_TOKEN:
+            zs->_decalaration_cache = _z_network_message_list_drop_filter(
+                zs->_decalaration_cache, _z_cache_declaration_undeclare_filter_token, n_msg);
+            break;
+        default:
+            _Z_ERROR("Invalid decl for _z_prune_declaration: %i", decl->_tag);
+    };
+#ifdef Z_BUILD_DEBUG
+    size_t cnt_after = _z_network_message_list_len(zs->_decalaration_cache);
+    assert(cnt_before == cnt_after + 1);
+#endif
 }
 
 void _z_close(_z_session_t *zn) { _z_session_close(zn, _Z_CLOSE_GENERIC); }
