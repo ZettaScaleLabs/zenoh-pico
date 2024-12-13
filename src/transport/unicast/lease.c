@@ -64,6 +64,7 @@ void *_zp_unicast_lease_task(void *ztu_arg) {
                 // Reset the lease parameters
                 ztu->_received = false;
             } else {
+                // THIS LOG STRING USED IN TEST, change with caution
                 _Z_INFO("Closing session because it has expired after %zums", ztu->_common._lease);
                 _zp_unicast_failed(ztu);
                 return 0;

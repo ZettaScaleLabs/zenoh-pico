@@ -219,6 +219,7 @@ static z_result_t _z_unicast_handshake_client(_z_transport_unicast_establish_par
         _z_t_msg_clear(&oam);
         ret = _Z_ERR_MESSAGE_UNEXPECTED;
     }
+    // THIS LOG STRING USED IN TEST, change with caution
     _Z_DEBUG("Received Z_OPEN(Ack)");
     param->_lease = oam._body._open._lease;  // The session lease
     // The initial SN at RX side. Initialize the session as we had already received

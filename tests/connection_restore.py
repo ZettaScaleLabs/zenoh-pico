@@ -7,6 +7,7 @@ ROUTER_INIT_TIMEOUT_S = 3
 WAIT_MESSAGE_TIMEOUT_S = 15
 DISCONNECT_MESSAGE = "Closing session because it has expired"
 CONNECT_MESSAGE = "Z_OPEN(Ack)"
+ROUTER_ERROR_MESSAGE = "ERROR"
 ZENOH_PORT = "7447"
 
 ROUTER_ARGS = ['-l', f'tcp/0.0.0.0:{ZENOH_PORT}', '--no-multicast-scouting']
@@ -22,8 +23,7 @@ def run_process(command, output_collector, process_list):
     process_list.append(process)
     for line in iter(process.stdout.readline, ''):
         print("--", line.strip())
-        if output_collector is not None:
-            output_collector.append(line.strip())
+        output_collector.append(line.strip())
     process.stdout.close()
     process.wait()
 
@@ -62,13 +62,22 @@ def wait_message(client_output, message):
     return False
 
 
+def check_router_errors(router_output):
+    for line in router_output:
+        if ROUTER_ERROR_MESSAGE in line:
+            print("Router have an error: ", line)
+            return False
+    return True
+
+
 def test_connection(router_command, client_command, timeout, wait_disconnect):
     print(f"Drop test {client_command} for timeout {timeout}")
+    router_output = []
     client_output = []
     process_list = []
     blocked = False
     try:
-        run_background(router_command, None, process_list)
+        run_background(router_command, router_output, process_list)
         time.sleep(ROUTER_INIT_TIMEOUT_S)
 
         run_background(client_command, client_output, process_list)
@@ -105,6 +114,9 @@ def test_connection(router_command, client_command, timeout, wait_disconnect):
                 print("Failed to restore connection.")
                 return False
 
+        if not check_router_errors(router_output):
+            return False
+
         print(f"Drop test {client_command} for timeout {timeout} passed")
         return True
     finally:
@@ -115,11 +127,12 @@ def test_connection(router_command, client_command, timeout, wait_disconnect):
 
 def test_restart(router_command, client_command, timeout):
     print(f"Restart test {client_command} for timeout {timeout}")
+    router_output = []
     client_output = []
     router_process_list = []
     client_process_list = []
     try:
-        run_background(router_command, None, router_process_list)
+        run_background(router_command, router_output, router_process_list)
         time.sleep(ROUTER_INIT_TIMEOUT_S)
 
         run_background(client_command, client_output, client_process_list)
@@ -136,12 +149,16 @@ def test_restart(router_command, client_command, timeout):
         time.sleep(timeout)
 
         print("Start router...")
-        run_background(router_command, None, router_process_list)
+        run_background(router_command, router_output, router_process_list)
+        time.sleep(ROUTER_INIT_TIMEOUT_S)
 
         if wait_message(client_output, CONNECT_MESSAGE):
             print("Connection restored successfully.")
         else:
             print("Failed to restore connection.")
+            return False
+
+        if not check_router_errors(router_output):
             return False
 
         print(f"Restart test {client_command} for timeout {timeout} passed")
