@@ -174,25 +174,28 @@ z_result_t _z_reopen(_z_session_rc_t *zn) {
 
     do {
         ret = _z_open(zn, &zs->_config, &zs->_local_zid);
-        // TODO(sashacmc): break on fatal error, and add timeout config
         if (ret != _Z_RES_OK) {
-            _Z_DEBUG("Reopen failed: %i, next try in 1s", ret);
-            z_sleep_s(1);
-            continue;
+            if (ret == _Z_ERR_TRANSPORT_OPEN_FAILED || ret == _Z_ERR_SCOUT_NO_RESULTS ||
+                ret == _Z_ERR_TRANSPORT_TX_FAILED || ret == _Z_ERR_TRANSPORT_RX_FAILED) {
+                _Z_DEBUG("Reopen failed, next try in 1s");
+                z_sleep_s(1);
+                continue;
+            } else {
+                _Z_ERROR("Reopen failed: %i", ret);
+                return ret;
+            }
         }
 
 #if Z_FEATURE_MULTI_THREAD == 1
-        // TODO (sashacmc): currnetly we can come to reopen only from task, so we can restart them
-        // but we have no original attributes (which currently for most cases is default)
-        _zp_start_lease_task(_Z_RC_IN_VAL(zn), NULL);
-        _zp_start_read_task(_Z_RC_IN_VAL(zn), NULL);
+        _zp_start_lease_task(zs, zs->_lease_task_attr);
+        _zp_start_read_task(zs, zs->_read_task_attr);
 #endif  // Z_FEATURE_MULTI_THREAD == 1
 
         if (ret == _Z_RES_OK && !_z_network_message_list_is_empty(zs->_decalaration_cache)) {
             _z_network_message_list_t *iter = zs->_decalaration_cache;
             while (iter != NULL) {
                 _z_network_message_t *n_msg = _z_network_message_list_head(iter);
-                ret = _z_send_n_msg(_Z_RC_IN_VAL(zn), n_msg, Z_RELIABILITY_RELIABLE, Z_CONGESTION_CONTROL_BLOCK);
+                ret = _z_send_n_msg(zs, n_msg, Z_RELIABILITY_RELIABLE, Z_CONGESTION_CONTROL_BLOCK);
                 if (ret != _Z_RES_OK) {
                     _Z_DEBUG("Send message during reopen failed: %i", ret);
                     continue;
@@ -326,6 +329,8 @@ z_result_t _zp_start_read_task(_z_session_t *zn, z_task_attr_t *attr) {
     // Free task if operation failed
     if (ret != _Z_RES_OK) {
         z_free(task);
+    } else {
+        zn->_read_task_attr = attr;
     }
     return ret;
 }
@@ -355,6 +360,8 @@ z_result_t _zp_start_lease_task(_z_session_t *zn, z_task_attr_t *attr) {
     // Free task if operation failed
     if (ret != _Z_RES_OK) {
         z_free(task);
+    } else {
+        zn->_lease_task_attr = attr;
     }
     return ret;
 }
