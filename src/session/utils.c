@@ -66,7 +66,10 @@ z_result_t _z_session_init(_z_session_t *zn, const _z_id_t *zid) {
     zn->_resource_id = 1;
     zn->_query_id = 1;
 
+#if Z_FEATURE_AUTO_RECONNECT == 1
+    _z_config_init(&zn->_config);
     zn->_decalaration_cache = NULL;
+#endif
 
     // Initialize the data structs
     zn->_local_resources = NULL;
@@ -108,8 +111,10 @@ void _z_session_clear(_z_session_t *zn) {
     _zp_stop_lease_task(zn);
 #endif
 
+#if Z_FEATURE_AUTO_RECONNECT == 1
     _z_config_clear(&zn->_config);
     _z_network_message_list_free(&zn->_decalaration_cache);
+#endif
 
     _z_close(zn);
     // Clear Zenoh PID

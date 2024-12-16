@@ -45,18 +45,26 @@
 static z_result_t _z_send_decalre(_z_session_t *zn, const _z_network_message_t *n_msg) {
     z_result_t ret = _Z_RES_OK;
     ret = _z_send_n_msg(zn, n_msg, Z_RELIABILITY_RELIABLE, Z_CONGESTION_CONTROL_BLOCK);
+
+#if Z_FEATURE_AUTO_RECONNECT == 1
     if (ret == _Z_RES_OK) {
         _z_cache_declaration(zn, n_msg);
     }
+#endif
+
     return ret;
 }
 
 static z_result_t _z_send_undecalre(_z_session_t *zn, const _z_network_message_t *n_msg) {
     z_result_t ret = _Z_RES_OK;
     ret = _z_send_n_msg(zn, n_msg, Z_RELIABILITY_RELIABLE, Z_CONGESTION_CONTROL_BLOCK);
+
+#if Z_FEATURE_AUTO_RECONNECT == 1
     if (ret == _Z_RES_OK) {
         _z_prune_declaration(zn, n_msg);
     }
+#endif
+
     return ret;
 }
 /*------------------ Scouting ------------------*/

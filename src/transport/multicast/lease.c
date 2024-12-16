@@ -21,6 +21,7 @@
 #include "zenoh-pico/session/utils.h"
 #include "zenoh-pico/transport/multicast/lease.h"
 #include "zenoh-pico/utils/logging.h"
+#include "zenoh-pico/utils/result.h"
 
 #if Z_FEATURE_MULTICAST_TRANSPORT == 1 || Z_FEATURE_RAWETH_TRANSPORT == 1
 
@@ -55,7 +56,12 @@ z_result_t _zp_multicast_send_keep_alive(_z_transport_multicast_t *ztm) {
 
 #if Z_FEATURE_MULTI_THREAD == 1 && (Z_FEATURE_MULTICAST_TRANSPORT == 1 || Z_FEATURE_RAWETH_TRANSPORT == 1)
 
-static void _zp_multicast_failed(_z_transport_multicast_t *ztm) { _z_reopen(ztm->_common._session); }
+static void _zp_multicast_failed(_z_transport_multicast_t *ztm) {
+    _ZP_UNUSED(ztm);
+#if Z_FEATURE_AUTO_RECONNECT == 1
+    _z_reopen(ztm->_common._session);
+#endif
+}
 
 static _z_zint_t _z_get_minimum_lease(_z_transport_peer_entry_list_t *peers, _z_zint_t local_lease) {
     _z_zint_t ret = local_lease;

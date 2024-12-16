@@ -38,8 +38,6 @@ extern "C" {
 typedef struct _z_session_t {
 #if Z_FEATURE_MULTI_THREAD == 1
     _z_mutex_t _mutex_inner;
-    z_task_attr_t *_lease_task_attr;
-    z_task_attr_t *_read_task_attr;
 #endif  // Z_FEATURE_MULTI_THREAD == 1
 
     // Zenoh-pico is considering a single transport per session.
@@ -58,10 +56,13 @@ typedef struct _z_session_t {
     _z_resource_list_t *_local_resources;
     _z_resource_list_t *_remote_resources;
 
+#if Z_FEATURE_AUTO_RECONNECT == 1
     // Information for session restoring
-    // Empty _config means session is not restorable
     _z_config_t _config;
     _z_network_message_list_t *_decalaration_cache;
+    z_task_attr_t *_lease_task_attr;
+    z_task_attr_t *_read_task_attr;
+#endif
 
     // Session subscriptions
 #if Z_FEATURE_SUBSCRIPTION == 1

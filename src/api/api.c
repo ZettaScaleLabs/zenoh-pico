@@ -702,13 +702,15 @@ z_result_t z_open(z_owned_session_t *zs, z_moved_config_t *config, const z_open_
         z_config_drop(config);
         return ret;
     }
+
     // Clean up
-    if (/* session is restorable*/ true) {
-        _Z_OWNED_RC_IN_VAL(zs)->_config = config->_this._val;
-        z_internal_config_null(&config->_this);
-    } else {
-        z_config_drop(config);
-    }
+#if Z_FEATURE_AUTO_RECONNECT == 1
+    _Z_OWNED_RC_IN_VAL(zs)->_config = config->_this._val;
+    z_internal_config_null(&config->_this);
+#else
+    z_config_drop(config);
+#endif
+
     return _Z_RES_OK;
 }
 

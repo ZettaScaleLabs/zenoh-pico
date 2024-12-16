@@ -42,10 +42,13 @@ z_result_t _zp_unicast_send_keep_alive(_z_transport_unicast_t *ztu) {
 #if Z_FEATURE_MULTI_THREAD == 1 && Z_FEATURE_UNICAST_TRANSPORT == 1
 
 static void _zp_unicast_failed(_z_transport_unicast_t *ztu) {
-    _z_session_rc_ref_t *zs = ztu->_common._session;
     _z_unicast_transport_close(ztu, _Z_CLOSE_EXPIRED);
     _z_unicast_transport_clear(ztu, true);
+
+#if Z_FEATURE_AUTO_RECONNECT == 1
+    _z_session_rc_ref_t *zs = ztu->_common._session;
     _z_reopen(zs);
+#endif
 }
 
 void *_zp_unicast_lease_task(void *ztu_arg) {

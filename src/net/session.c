@@ -165,6 +165,8 @@ z_result_t _z_open(_z_session_rc_t *zn, _z_config_t *config, const _z_id_t *zid)
     return ret;
 }
 
+#if Z_FEATURE_AUTO_RECONNECT == 1
+
 z_result_t _z_reopen(_z_session_rc_t *zn) {
     z_result_t ret = _Z_RES_OK;
     _z_session_t *zs = _Z_RC_IN_VAL(zn);
@@ -260,6 +262,7 @@ void _z_prune_declaration(_z_session_t *zs, const _z_network_message_t *n_msg) {
     assert(cnt_before == cnt_after + 1);
 #endif
 }
+#endif  // Z_FEATURE_AUTO_RECONNECT == 1
 
 void _z_close(_z_session_t *zn) { _z_session_close(zn, _Z_CLOSE_GENERIC); }
 
@@ -329,8 +332,10 @@ z_result_t _zp_start_read_task(_z_session_t *zn, z_task_attr_t *attr) {
     // Free task if operation failed
     if (ret != _Z_RES_OK) {
         z_free(task);
+#if Z_FEATURE_AUTO_RECONNECT == 1
     } else {
         zn->_read_task_attr = attr;
+#endif
     }
     return ret;
 }
@@ -360,8 +365,10 @@ z_result_t _zp_start_lease_task(_z_session_t *zn, z_task_attr_t *attr) {
     // Free task if operation failed
     if (ret != _Z_RES_OK) {
         z_free(task);
+#if Z_FEATURE_AUTO_RECONNECT == 1
     } else {
         zn->_lease_task_attr = attr;
+#endif
     }
     return ret;
 }

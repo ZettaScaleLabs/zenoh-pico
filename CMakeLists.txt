@@ -244,6 +244,7 @@ set(Z_FEATURE_LOCAL_SUBSCRIBER 0 CACHE STRING "Toggle local subscriptions")
 set(Z_FEATURE_PUBLISHER_SESSION_CHECK 1 CACHE STRING "Toggle publisher session check")
 set(Z_FEATURE_BATCHING 1 CACHE STRING "Toggle batching")
 set(Z_FEATURE_RX_CACHE 0 CACHE STRING "Toggle RX_CACHE")
+set(Z_FEATURE_AUTO_RECONNECT 1 CACHE STRING "Toggle automatic reconnection")
 
 # Add a warning message if someone tries to enable Z_FEATURE_LINK_SERIAL_USB directly
 if(Z_FEATURE_LINK_SERIAL_USB AND NOT Z_FEATURE_UNSTABLE_API)
@@ -261,6 +262,7 @@ message(STATUS "Building with feature confing:\n\
 * QUERYABLE: ${Z_FEATURE_QUERYABLE}\n\
 * LIVELINESS: ${Z_FEATURE_LIVELINESS}\n\
 * INTEREST: ${Z_FEATURE_INTEREST}\n\
+* AUTO_RECONNECT: ${Z_FEATURE_AUTO_RECONNECT}\n\
 * RAWETH: ${Z_FEATURE_RAWETH_TRANSPORT}")
 
 configure_file(
