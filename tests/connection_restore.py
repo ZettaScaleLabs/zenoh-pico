@@ -1,6 +1,7 @@
 import subprocess
 import time
 import sys
+import os
 import threading
 
 ROUTER_INIT_TIMEOUT_S = 3
@@ -11,15 +12,22 @@ ROUTER_ERROR_MESSAGE = "ERROR"
 ZENOH_PORT = "7447"
 
 ROUTER_ARGS = ['-l', f'tcp/0.0.0.0:{ZENOH_PORT}', '--no-multicast-scouting']
+STDBUF_CMD = ["stdbuf", "-o0"]
 
 DIR_EXAMPLES = "build/examples"
-ACTIVE_CLIENT_COMMAND = ["stdbuf", "-o0", f'{DIR_EXAMPLES}/z_pub', '-e', f'tcp/127.0.0.1:{ZENOH_PORT}']
-PASSIVE_CLIENT_COMMAND = ["stdbuf", "-o0", f'{DIR_EXAMPLES}/z_sub', '-e', f'tcp/127.0.0.1:{ZENOH_PORT}']
+ACTIVE_CLIENT_COMMAND = STDBUF_CMD + [f'{DIR_EXAMPLES}/z_pub', '-e', f'tcp/127.0.0.1:{ZENOH_PORT}']
+PASSIVE_CLIENT_COMMAND = STDBUF_CMD + [f'{DIR_EXAMPLES}/z_sub', '-e', f'tcp/127.0.0.1:{ZENOH_PORT}']
+
+LIBASAN_PATH = subprocess.run(["gcc", "-print-file-name=libasan.so"], stdout=subprocess.PIPE, text=True, check=True).stdout.strip()
 
 
 def run_process(command, output_collector, process_list):
+    env = os.environ.copy()
+    if LIBASAN_PATH:
+        env["LD_PRELOAD"] = LIBASAN_PATH
+
     print(f"Run {command}")
-    process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=env)
     process_list.append(process)
     for line in iter(process.stdout.readline, ''):
         print("--", line.strip())
@@ -194,7 +202,7 @@ def main():
         print("Usage: sudo python3 ./connection_restore.py /path/to/zenohd")
         sys.exit(1)
 
-    router_command = [sys.argv[1]] + ROUTER_ARGS
+    router_command = STDBUF_CMD + [sys.argv[1]] + ROUTER_ARGS
 
     test_connction_drop(router_command)
     test_router_restart(router_command)
