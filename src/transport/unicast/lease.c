@@ -79,6 +79,7 @@ void *_zp_unicast_lease_task(void *ztu_arg) {
             // Check if need to send a keep alive
             if (ztu->_common._transmitted == false) {
                 if (_zp_unicast_send_keep_alive(ztu) < 0) {
+                    // THIS LOG STRING USED IN TEST, change with caution
                     _Z_INFO("Send keep alive failed.");
                     _zp_unicast_failed(ztu);
                     return 0;

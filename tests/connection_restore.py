@@ -6,8 +6,8 @@ import threading
 
 ROUTER_INIT_TIMEOUT_S = 3
 WAIT_MESSAGE_TIMEOUT_S = 15
-DISCONNECT_MESSAGE = "Closing session because it has expired"
-CONNECT_MESSAGE = "Z_OPEN(Ack)"
+DISCONNECT_MESSAGES = ["Closing session because it has expired", "Send keep alive failed"]
+CONNECT_MESSAGES = ["Z_OPEN(Ack)"]
 ROUTER_ERROR_MESSAGE = "ERROR"
 ZENOH_PORT = "7447"
 
@@ -61,24 +61,44 @@ def unblock_connection():
     subprocess.run(["iptables", "-D", "OUTPUT", "-p", "tcp", "--sport", ZENOH_PORT, "-j", "DROP"], check=False)
 
 
-def wait_message(client_output, message):
+def wait_messages(client_output, messages):
     start_time = time.time()
     while time.time() - start_time < WAIT_MESSAGE_TIMEOUT_S:
-        if any(message in line for line in client_output):
+        if any(message in line for line in client_output for message in messages):
             return True
         time.sleep(1)
     return False
 
 
+def wait_connect(client_output):
+    if wait_messages(client_output, CONNECT_MESSAGES):
+        print("Initial connection successful.")
+    else:
+        raise Exception("Connection failed.")
+
+
+def wait_reconnect(client_output):
+    if wait_messages(client_output, CONNECT_MESSAGES):
+        print("Connection restored successfully.")
+    else:
+        raise Exception("Failed to restore connection.")
+
+
+def wait_disconnect(client_output):
+    if wait_messages(client_output, DISCONNECT_MESSAGES):
+        print("Connection lost successfully.")
+    else:
+        raise Exception("Failed to block connection.")
+
+
 def check_router_errors(router_output):
     for line in router_output:
         if ROUTER_ERROR_MESSAGE in line:
-            print("Router have an error: ", line)
-            return False
-    return True
+            print(line)
+            raise Exception("Router have an error.")
 
 
-def test_connection(router_command, client_command, timeout, wait_disconnect):
+def test_connection_drop(router_command, client_command, timeout):
     print(f"Drop test {client_command} for timeout {timeout}")
     router_output = []
     client_output = []
@@ -92,48 +112,34 @@ def test_connection(router_command, client_command, timeout, wait_disconnect):
 
         # Two iterations because there was an error on the second reconnection
         for _ in range(2):
-            if wait_message(client_output, CONNECT_MESSAGE):
-                print("Initial connection successful.")
-            else:
-                print("Connection failed.")
-                return False
-
+            wait_connect(client_output)
             client_output.clear()
+
             print("Blocking connection...")
             block_connection()
             blocked = True
+
             time.sleep(timeout)
 
-            if wait_disconnect:
-                if wait_message(client_output, DISCONNECT_MESSAGE):
-                    print("Connection lost successfully.")
-                else:
-                    print("Failed to block connection.")
-                    return False
-
+            wait_disconnect(client_output)
             client_output.clear()
+
             print("Unblocking connection...")
             unblock_connection()
             blocked = False
 
-            if wait_message(client_output, CONNECT_MESSAGE):
-                print("Connection restored successfully.")
-            else:
-                print("Failed to restore connection.")
-                return False
+            wait_reconnect(client_output)
 
-        if not check_router_errors(router_output):
-            return False
+        check_router_errors(router_output)
 
         print(f"Drop test {client_command} for timeout {timeout} passed")
-        return True
     finally:
         if blocked:
             unblock_connection()
         terminate_processes(process_list)
 
 
-def test_restart(router_command, client_command, timeout):
+def test_router_restart(router_command, client_command, timeout):
     print(f"Restart test {client_command} for timeout {timeout}")
     router_output = []
     client_output = []
@@ -145,56 +151,28 @@ def test_restart(router_command, client_command, timeout):
 
         run_background(client_command, client_output, client_process_list)
 
-        if wait_message(client_output, CONNECT_MESSAGE):
-            print("Initial connection successful.")
-        else:
-            print("Connection failed.")
-            return False
-
+        wait_connect(client_output)
         client_output.clear()
+
         print("Stop router...")
         terminate_processes(router_process_list)
+
         time.sleep(timeout)
+
+        wait_disconnect(client_output)
+        client_output.clear()
 
         print("Start router...")
         run_background(router_command, router_output, router_process_list)
         time.sleep(ROUTER_INIT_TIMEOUT_S)
 
-        if wait_message(client_output, CONNECT_MESSAGE):
-            print("Connection restored successfully.")
-        else:
-            print("Failed to restore connection.")
-            return False
+        wait_reconnect(client_output)
 
-        if not check_router_errors(router_output):
-            return False
+        check_router_errors(router_output)
 
         print(f"Restart test {client_command} for timeout {timeout} passed")
-        return True
     finally:
         terminate_processes(client_process_list + router_process_list)
-
-
-def test_connction_drop(router_command):
-    # timeout more than sesson timeout
-    # if not test_connection(router_command, ACTIVE_CLIENT_COMMAND, 8, False):
-    #    sys.exit(1)
-    # timeout less than sesson timeout
-    if not test_connection(router_command, ACTIVE_CLIENT_COMMAND, 15, True):
-        sys.exit(1)
-    # timeout more than sesson timeout
-    # if not test_connection(router_command, PASSIVE_CLIENT_COMMAND, 8, False):
-    #    sys.exit(1)
-    # timeout less than sesson timeout
-    if not test_connection(router_command, PASSIVE_CLIENT_COMMAND, 15, True):
-        sys.exit(1)
-
-
-def test_router_restart(router_command):
-    if not test_restart(router_command, ACTIVE_CLIENT_COMMAND, 15):
-        sys.exit(1)
-    if not test_restart(router_command, PASSIVE_CLIENT_COMMAND, 15):
-        sys.exit(1)
 
 
 def main():
@@ -204,8 +182,21 @@ def main():
 
     router_command = STDBUF_CMD + [sys.argv[1]] + ROUTER_ARGS
 
-    test_connction_drop(router_command)
-    test_router_restart(router_command)
+    # timeout less than sesson timeout
+    test_connection_drop(router_command, ACTIVE_CLIENT_COMMAND, 15)
+    test_connection_drop(router_command, PASSIVE_CLIENT_COMMAND, 15)
+
+    # timeout more than sesson timeout
+    test_connection_drop(router_command, ACTIVE_CLIENT_COMMAND, 15)
+    test_connection_drop(router_command, PASSIVE_CLIENT_COMMAND, 15)
+
+    # timeout less than sesson timeout
+    test_router_restart(router_command, ACTIVE_CLIENT_COMMAND, 8)
+    test_router_restart(router_command, PASSIVE_CLIENT_COMMAND, 8)
+
+    # timeout more than sesson timeout
+    test_router_restart(router_command, ACTIVE_CLIENT_COMMAND, 15)
+    test_router_restart(router_command, PASSIVE_CLIENT_COMMAND, 15)
 
 
 if __name__ == "__main__":
