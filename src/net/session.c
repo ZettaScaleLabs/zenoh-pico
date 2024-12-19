@@ -183,14 +183,19 @@ z_result_t _z_reopen(_z_session_rc_t *zn) {
                 z_sleep_s(1);
                 continue;
             } else {
-                _Z_ERROR("Reopen failed: %i", ret);
                 return ret;
             }
         }
 
 #if Z_FEATURE_MULTI_THREAD == 1
-        _zp_start_lease_task(zs, zs->_lease_task_attr);
-        _zp_start_read_task(zs, zs->_read_task_attr);
+        ret = _zp_start_lease_task(zs, zs->_lease_task_attr);
+        if (ret != _Z_RES_OK) {
+            return ret;
+        }
+        ret = _zp_start_read_task(zs, zs->_read_task_attr);
+        if (ret != _Z_RES_OK) {
+            return ret;
+        }
 #endif  // Z_FEATURE_MULTI_THREAD == 1
 
         if (ret == _Z_RES_OK && !_z_network_message_list_is_empty(zs->_decalaration_cache)) {

@@ -47,7 +47,10 @@ static void _zp_unicast_failed(_z_transport_unicast_t *ztu) {
 
 #if Z_FEATURE_AUTO_RECONNECT == 1
     _z_session_rc_ref_t *zs = ztu->_common._session;
-    _z_reopen(zs);
+    z_result_t ret = _z_reopen(zs);
+    if (ret != _Z_RES_OK) {
+        _Z_ERROR("Reopen failed: %i", ret);
+    }
 #endif
 }
 
