@@ -59,6 +59,7 @@ void _z_transport_peer_common_copy(_z_transport_peer_common_t *dst, const _z_tra
 bool _z_transport_peer_common_eq(const _z_transport_peer_common_t *left, const _z_transport_peer_common_t *right);
 
 typedef struct {
+    _z_transport_peer_common_t common;
     _z_slice_t _remote_addr;
     _z_conduit_sn_list_t _sn_rx_sns;
     // SN numbers
@@ -66,7 +67,6 @@ typedef struct {
     volatile _z_zint_t _lease;
     volatile _z_zint_t _next_lease;
     uint16_t _peer_id;
-    _z_transport_peer_common_t common;
 } _z_transport_peer_multicast_t;
 
 size_t _z_transport_peer_multicast_size(const _z_transport_peer_multicast_t *src);
@@ -88,6 +88,7 @@ typedef enum _z_unicast_peer_flow_state_e {
 } _z_unicast_peer_flow_state_e;
 
 typedef struct {
+    _z_transport_peer_common_t common;
     _z_sys_net_socket_t _socket;
     // SN numbers
     _z_zint_t _sn_rx_reliable;
@@ -96,7 +97,6 @@ typedef struct {
     uint8_t flow_state;
     uint16_t flow_curr_size;
     _z_zbuf_t flow_buff;
-    _z_transport_peer_common_t common;
 } _z_transport_peer_unicast_t;
 
 void _z_transport_peer_unicast_clear(_z_transport_peer_unicast_t *src);
