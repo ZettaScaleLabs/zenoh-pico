@@ -164,8 +164,8 @@ static z_result_t _z_multicast_handle_frame(_z_transport_multicast_t *ztm, uint8
     for (size_t i = 0; i < len; i++) {
         _z_network_message_t *zm = _z_network_message_svec_get(&msg->_messages, i);
         zm->_reliability = tmsg_reliability;
-        _z_msg_fix_mapping(zm, (uintptr_t)&entry->common);
-        _z_handle_network_message(ztm->_common._session, zm, &entry->common);
+        // TODO: Tag message with peer address
+        _z_handle_network_message(ztm->_common._session, zm, _Z_KEYEXPR_MAPPING_UNKNOWN_REMOTE);
     }
     return _Z_RES_OK;
 }
@@ -281,9 +281,9 @@ static z_result_t _z_multicast_handle_fragment_inner(_z_transport_multicast_t *z
         ret = _z_network_message_decode(&zm, &zbf, arcs);
         zm._reliability = tmsg_reliability;
         if (ret == _Z_RES_OK) {
-            _z_msg_fix_mapping(&zm, (uintptr_t)&entry->common);
+            // TODO: Tag message with peer address
             // Memory clear of the network message data must be handled by the network message layer
-            _z_handle_network_message(ztm->_common._session, &zm, &entry->common);
+            _z_handle_network_message(ztm->_common._session, &zm, _Z_KEYEXPR_MAPPING_UNKNOWN_REMOTE);
         } else {
             _Z_INFO("Failed to decode defragmented message");
             ret = _Z_ERR_MESSAGE_DESERIALIZATION_FAILED;
