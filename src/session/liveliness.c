@@ -238,7 +238,7 @@ static z_result_t _z_liveliness_pending_query_reply(_z_session_t *zn, uint32_t i
     if (ret == _Z_RES_OK) {
         _Z_DEBUG("Resolving %d - %.*s on mapping 0x%x", keyexpr->_id, (int)_z_string_len(&keyexpr->_suffix),
                  _z_string_data(&keyexpr->_suffix), (unsigned int)keyexpr->_mapping);
-        _z_keyexpr_t expanded_ke = __unsafe_z_get_expanded_key_from_key(zn, keyexpr, true, peer);
+        _z_keyexpr_t expanded_ke = __unsafe_z_get_expanded_key_from_key(zn, keyexpr, true, NULL);
         _Z_DEBUG("Reply liveliness query for %d - %.*s", expanded_ke._id, (int)_z_string_len(&expanded_ke._suffix),
                  _z_string_data(&expanded_ke._suffix));
 

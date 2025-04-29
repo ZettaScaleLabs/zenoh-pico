@@ -122,7 +122,7 @@ static z_result_t _z_trigger_query_reply_partial_inner(_z_session_t *zn, const _
         _z_session_mutex_unlock(zn);
         return _Z_ERR_ENTITY_UNKNOWN;
     }
-    _z_keyexpr_t expanded_ke = __unsafe_z_get_expanded_key_from_key(zn, keyexpr, true, peer);
+    _z_keyexpr_t expanded_ke = __unsafe_z_get_expanded_key_from_key(zn, keyexpr, true, NULL);
     if (!pen_qry->_anykey && !_z_keyexpr_suffix_intersects(&pen_qry->_key, keyexpr)) {
         _z_session_mutex_unlock(zn);
         return _Z_ERR_QUERY_NOT_MATCH;
