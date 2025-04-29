@@ -66,7 +66,6 @@ typedef struct {
     _z_zint_t _sn_res;
     volatile _z_zint_t _lease;
     volatile _z_zint_t _next_lease;
-    uint16_t _peer_id;
 } _z_transport_peer_multicast_t;
 
 size_t _z_transport_peer_multicast_size(const _z_transport_peer_multicast_t *src);
@@ -77,8 +76,6 @@ bool _z_transport_peer_multicast_eq(const _z_transport_peer_multicast_t *left,
 _Z_ELEM_DEFINE(_z_transport_peer_multicast, _z_transport_peer_multicast_t, _z_transport_peer_multicast_size,
                _z_transport_peer_multicast_clear, _z_transport_peer_multicast_copy, _z_noop_move)
 _Z_LIST_DEFINE(_z_transport_peer_multicast, _z_transport_peer_multicast_t)
-_z_transport_peer_multicast_list_t *_z_transport_peer_multicast_list_insert(_z_transport_peer_multicast_list_t *root,
-                                                                            _z_transport_peer_multicast_t *entry);
 
 typedef enum _z_unicast_peer_flow_state_e {
     _Z_FLOW_STATE_INACTIVE = 0,
