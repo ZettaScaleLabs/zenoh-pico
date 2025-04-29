@@ -13,6 +13,7 @@
 //
 
 #include "zenoh-pico/protocol/core.h"
+#include "zenoh-pico/session/session.h"
 #include "zenoh-pico/transport/transport.h"
 #include "zenoh-pico/transport/utils.h"
 
@@ -22,6 +23,7 @@ void _z_transport_peer_common_clear(_z_transport_peer_common_t *src) {
     _z_wbuf_clear(&src->_dbuf_best_effort);
 #endif
     src->_remote_zid = _z_id_empty();
+    _z_resource_list_free(&src->_remote_resources);
 }
 void _z_transport_peer_common_copy(_z_transport_peer_common_t *dst, const _z_transport_peer_common_t *src) {
 #if Z_FEATURE_FRAGMENTATION == 1

@@ -309,7 +309,7 @@ z_result_t _z_interest_process_declares(_z_session_t *zn, const _z_declaration_t
     }
     // Retrieve key
     _z_session_mutex_lock(zn);
-    _z_keyexpr_t key = __unsafe_z_get_expanded_key_from_key(zn, decl_key, true);
+    _z_keyexpr_t key = __unsafe_z_get_expanded_key_from_key(zn, decl_key, true, NULL);
     if (!_z_keyexpr_has_suffix(&key)) {
         _z_session_mutex_unlock(zn);
         return _Z_ERR_KEYEXPR_UNKNOWN;

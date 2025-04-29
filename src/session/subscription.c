@@ -213,9 +213,9 @@ static z_result_t _z_subscription_get_infos(_z_session_t *zn, _z_subscriber_kind
         infos->sub_nb = cache_entry->sub_nb;
     } else {  // Construct data and add to cache
         _Z_DEBUG("Resolving %d - %.*s on mapping 0x%x", infos->ke_in._id, (int)_z_string_len(&infos->ke_in._suffix),
-                 _z_string_data(&infos->ke_in._suffix), _z_keyexpr_mapping_id(&infos->ke_in));
+                 _z_string_data(&infos->ke_in._suffix), (unsigned int)infos->ke_in._mapping);
         _z_session_mutex_lock(zn);
-        infos->ke_out = __unsafe_z_get_expanded_key_from_key(zn, &infos->ke_in, true);
+        infos->ke_out = __unsafe_z_get_expanded_key_from_key(zn, &infos->ke_in, true, NULL);
 
         if (!_z_keyexpr_has_suffix(&infos->ke_out)) {
             _z_session_mutex_unlock(zn);

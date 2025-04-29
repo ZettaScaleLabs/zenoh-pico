@@ -37,17 +37,18 @@
 
 /*------------------ Handle message ------------------*/
 
-static z_result_t _z_handle_declare_inner(_z_session_t *zn, _z_n_msg_declare_t *decl, uint16_t local_peer_id) {
+static z_result_t _z_handle_declare_inner(_z_session_t *zn, _z_n_msg_declare_t *decl,
+                                          _z_transport_peer_common_t *peer) {
     switch (decl->_decl._tag) {
         case _Z_DECL_KEXPR:
             if (_z_register_resource(zn, &decl->_decl._body._decl_kexpr._keyexpr, decl->_decl._body._decl_kexpr._id,
-                                     local_peer_id) == 0) {
+                                     peer) == 0) {
                 return _Z_ERR_ENTITY_DECLARATION_FAILED;
             }
             break;
 
         case _Z_UNDECL_KEXPR:
-            _z_unregister_resource(zn, decl->_decl._body._undecl_kexpr._id, local_peer_id);
+            _z_unregister_resource(zn, decl->_decl._body._undecl_kexpr._id, peer);
             break;
 
         case _Z_DECL_SUBSCRIBER:
@@ -85,8 +86,8 @@ static z_result_t _z_handle_declare_inner(_z_session_t *zn, _z_n_msg_declare_t *
     return _Z_RES_OK;
 }
 
-static z_result_t _z_handle_declare(_z_session_t *zn, _z_n_msg_declare_t *decl, uint16_t local_peer_id) {
-    z_result_t ret = _z_handle_declare_inner(zn, decl, local_peer_id);
+static z_result_t _z_handle_declare(_z_session_t *zn, _z_n_msg_declare_t *decl, _z_transport_peer_common_t *peer) {
+    z_result_t ret = _z_handle_declare_inner(zn, decl, peer);
     _z_n_msg_declare_clear(decl);
     return ret;
 }
@@ -162,14 +163,14 @@ static z_result_t _z_handle_response(_z_session_t *zn, _z_n_msg_response_t *resp
     return _Z_RES_OK;
 }
 
-z_result_t _z_handle_network_message(_z_session_rc_t *zsrc, _z_zenoh_message_t *msg, uint16_t local_peer_id) {
+z_result_t _z_handle_network_message(_z_session_rc_t *zsrc, _z_zenoh_message_t *msg, _z_transport_peer_common_t *peer) {
     z_result_t ret = _Z_RES_OK;
     _z_session_t *zn = _Z_RC_IN_VAL(zsrc);
 
     switch (msg->_tag) {
         case _Z_N_DECLARE:
             _Z_DEBUG("Handling _Z_N_DECLARE: %i", msg->_body._declare._decl._tag);
-            ret = _z_handle_declare(zn, &msg->_body._declare, local_peer_id);
+            ret = _z_handle_declare(zn, &msg->_body._declare, peer);
             break;
 
         case _Z_N_PUSH:
