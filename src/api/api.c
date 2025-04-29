@@ -967,7 +967,7 @@ z_result_t z_put(const z_loaned_session_t *zs, const z_loaned_keyexpr_t *keyexpr
     _z_trigger_subscriptions_put(
         _Z_RC_IN_VAL(zs), &keyexpr_aliased, &payload_bytes, &local_encoding, &local_timestamp,
         _z_n_qos_make(opt.is_express, opt.congestion_control == Z_CONGESTION_CONTROL_BLOCK, opt.priority),
-        &attachment_bytes, reliability, &local_source_info);
+        &attachment_bytes, reliability, &local_source_info, NULL);
 #else
     z_encoding_drop(opt.encoding);
     z_bytes_drop(opt.attachment);
@@ -1155,7 +1155,7 @@ z_result_t z_publisher_put(const z_loaned_publisher_t *pub, z_moved_bytes_t *pay
         _z_trigger_subscriptions_put(
             session, &pub_keyexpr, &payload_bytes, &encoding, &local_timestamp,
             _z_n_qos_make(pub->_is_express, pub->_congestion_control == Z_CONGESTION_CONTROL_BLOCK, pub->_priority),
-            &attachment_bytes, reliability, &local_source_info);
+            &attachment_bytes, reliability, &local_source_info, NULL);
 #endif
     } else {
         ret = _Z_ERR_SESSION_CLOSED;

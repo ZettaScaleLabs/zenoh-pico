@@ -97,7 +97,7 @@ int main(int argc, char **argv) {
     }
 
     // Clean up
-    z_drop(z_move(sub));
+    // z_drop(z_move(sub));
     z_drop(z_move(s));
     return 0;
 }
