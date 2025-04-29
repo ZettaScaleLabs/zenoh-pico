@@ -164,7 +164,7 @@ static z_result_t _z_multicast_handle_frame(_z_transport_multicast_t *ztm, uint8
     for (size_t i = 0; i < len; i++) {
         _z_network_message_t *zm = _z_network_message_svec_get(&msg->_messages, i);
         zm->_reliability = tmsg_reliability;
-        // TODO: Tag message with peer address
+        _z_msg_fix_mapping(zm, (uintptr_t)&entry->common);
         _z_handle_network_message(ztm->_common._session, zm, &entry->common);
     }
     return _Z_RES_OK;
@@ -281,7 +281,7 @@ static z_result_t _z_multicast_handle_fragment_inner(_z_transport_multicast_t *z
         ret = _z_network_message_decode(&zm, &zbf, arcs);
         zm._reliability = tmsg_reliability;
         if (ret == _Z_RES_OK) {
-            // TODO: Tag message with peer address
+            _z_msg_fix_mapping(&zm, (uintptr_t)&entry->common);
             // Memory clear of the network message data must be handled by the network message layer
             _z_handle_network_message(ztm->_common._session, &zm, &entry->common);
         } else {
