@@ -106,6 +106,7 @@ z_result_t _z_transport_peer_unicast_add(_z_transport_unicast_t *ztu, _z_transpo
 
     peer->common._remote_zid = param->_remote_zid;
     peer->common._received = true;
+    peer->common._remote_resources = NULL;
 #if Z_FEATURE_FRAGMENTATION == 1
     peer->common._patch = param->_patch < _Z_CURRENT_PATCH ? param->_patch : _Z_CURRENT_PATCH;
     peer->common._state_reliable = _Z_DBUF_STATE_NULL;
