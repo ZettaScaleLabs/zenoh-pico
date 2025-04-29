@@ -124,7 +124,9 @@ static inline void _z_keyexpr_fix_mapping(_z_keyexpr_t *ke, uintptr_t mapping) {
     }
 }
 static inline bool _z_keyexpr_has_suffix(const _z_keyexpr_t *ke) { return _z_string_check(&ke->_suffix); }
-static inline bool _z_keyexpr_check(const _z_keyexpr_t *ke) { return (ke->_id != 0) || _z_keyexpr_has_suffix(ke); }
+static inline bool _z_keyexpr_check(const _z_keyexpr_t *ke) {
+    return (ke->_id != Z_RESOURCE_ID_NONE) || _z_keyexpr_has_suffix(ke);
+}
 
 /**
  * Create a resource key from a resource name.
