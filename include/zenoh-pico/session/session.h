@@ -181,7 +181,7 @@ typedef struct _z_interest_msg_t {
 /**
  * The callback signature of the functions handling interest messages.
  */
-typedef void (*_z_interest_handler_t)(const _z_interest_msg_t *msg, void *arg);
+typedef void (*_z_interest_handler_t)(const _z_interest_msg_t *msg, _z_transport_peer_common_t *peer, void *arg);
 
 typedef struct {
     _z_keyexpr_t _key;

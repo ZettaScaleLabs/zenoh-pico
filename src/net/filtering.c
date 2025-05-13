@@ -23,37 +23,39 @@
 #include "zenoh-pico/session/session.h"
 
 #if Z_FEATURE_INTEREST == 1
-void _z_decl_id_elem_free(void **e) {
-    uint32_t *ptr = (uint32_t *)*e;
+void _z_filter_target_elem_free(void **e) {
+    _z_filter_target_t *ptr = (_z_filter_target_t *)*e;
     if (ptr != NULL) {
         z_free(ptr);
         *e = NULL;
     }
 }
 
-static bool _z_decl_id_eq(const void *left, const void *right) {
-    uint32_t left_val = *(const uint32_t *)left;
-    uint32_t right_val = *(const uint32_t *)right;
-    return left_val == right_val;
+static bool _z_filter_target_eq(const void *left, const void *right) {
+    const _z_filter_target_t *left_val = (const _z_filter_target_t *)left;
+    const _z_filter_target_t *right_val = (const _z_filter_target_t *)right;
+    return (left_val->peer == right_val->peer) && (left_val->decl_id == right_val->decl_id);
 }
 
-static bool _z_write_filter_push_decl_id(_z_writer_filter_ctx_t *ctx, uint32_t id) {
-    uint32_t *alloc_id = (uint32_t *)z_malloc(sizeof(uint32_t));
-    if (alloc_id == NULL) {
-        _Z_ERROR("Failed to allocate declare id.");
+static bool _z_write_filter_push_target(_z_writer_filter_ctx_t *ctx, _z_transport_peer_common_t *peer, uint32_t id) {
+    _z_filter_target_t *target = (_z_filter_target_t *)z_malloc(sizeof(_z_filter_target_t));
+    if (target == NULL) {
+        _Z_ERROR("Failed to allocate filter target.");
         return false;
     }
-    *alloc_id = id;
-    ctx->decl_ids = _z_decl_id_list_push(ctx->decl_ids, alloc_id);
-    if (ctx->decl_ids == NULL) {  // Allocation can fail
+    target->peer = (uintptr_t)peer;
+    target->decl_id = id;
+    ctx->targets = _z_filter_target_list_push(ctx->targets, target);
+    if (ctx->targets == NULL) {  // Allocation can fail
         return false;
     }
     return true;
 }
 
-static void _z_write_filter_callback(const _z_interest_msg_t *msg, void *arg) {
+static void _z_write_filter_callback(const _z_interest_msg_t *msg, _z_transport_peer_common_t *peer, void *arg) {
+    // TODO: clear filter if peers disconnect
     _z_writer_filter_ctx_t *ctx = (_z_writer_filter_ctx_t *)arg;
-
+    
     switch (ctx->state) {
         // Update init state
         case WRITE_FILTER_INIT:
@@ -64,7 +66,7 @@ static void _z_write_filter_callback(const _z_interest_msg_t *msg, void *arg) {
 
                 case _Z_INTEREST_MSG_TYPE_DECL_SUBSCRIBER:
                 case _Z_INTEREST_MSG_TYPE_DECL_QUERYABLE:
-                    if (_z_write_filter_push_decl_id(ctx, msg->id)) {
+                    if (_z_write_filter_push_target(ctx, peer, msg->id)) {
                         ctx->state = WRITE_FILTER_OFF;
                     }
                     break;
@@ -76,7 +78,7 @@ static void _z_write_filter_callback(const _z_interest_msg_t *msg, void *arg) {
         // Remove filter if we have targets
         case WRITE_FILTER_ACTIVE:
             if (msg->type == _Z_INTEREST_MSG_TYPE_DECL_SUBSCRIBER || msg->type == _Z_INTEREST_MSG_TYPE_DECL_QUERYABLE) {
-                if (_z_write_filter_push_decl_id(ctx, msg->id)) {
+                if (_z_write_filter_push_target(ctx, peer, msg->id)) {
                     ctx->state = WRITE_FILTER_OFF;
                 }
             }
@@ -85,9 +87,10 @@ static void _z_write_filter_callback(const _z_interest_msg_t *msg, void *arg) {
         case WRITE_FILTER_OFF:
             if ((msg->type == _Z_INTEREST_MSG_TYPE_UNDECL_SUBSCRIBER ||
                  msg->type == _Z_INTEREST_MSG_TYPE_UNDECL_QUERYABLE)) {
-                ctx->decl_ids = _z_decl_id_list_drop_filter(ctx->decl_ids, _z_decl_id_eq, &msg->id);
+                _z_filter_target_t target = {.decl_id = msg->id, .peer = (uintptr_t)peer};
+                ctx->targets = _z_filter_target_list_drop_filter(ctx->targets, _z_filter_target_eq, &target);
                 // Activate filter if no more targets
-                if (ctx->decl_ids == NULL) {
+                if (ctx->targets == NULL) {
                     ctx->state = WRITE_FILTER_ACTIVE;
                 }
             }
@@ -108,7 +111,7 @@ z_result_t _z_write_filter_create(_z_session_t *zn, _z_write_filter_t *filter, _
         return _Z_ERR_SYSTEM_OUT_OF_MEMORY;
     }
     ctx->state = (zn->_mode == Z_WHATAMI_CLIENT) ? WRITE_FILTER_INIT : WRITE_FILTER_ACTIVE;
-    ctx->decl_ids = _z_decl_id_list_new();
+    ctx->targets = _z_filter_target_list_new();
 
     filter->ctx = ctx;
     filter->_interest_id = _z_add_interest(zn, keyexpr, _z_write_filter_callback, flags, (void *)ctx);
