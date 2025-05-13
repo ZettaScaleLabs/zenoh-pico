@@ -23,6 +23,34 @@
 #include "zenoh-pico/session/session.h"
 
 #if Z_FEATURE_INTEREST == 1
+void _z_decl_id_elem_free(void **e) {
+    uint32_t *ptr = (uint32_t *)*e;
+    if (ptr != NULL) {
+        z_free(ptr);
+        *e = NULL;
+    }
+}
+
+static bool _z_decl_id_eq(const void *left, const void *right) {
+    uint32_t left_val = *(const uint32_t *)left;
+    uint32_t right_val = *(const uint32_t *)right;
+    return left_val == right_val;
+}
+
+static bool _z_write_filter_push_decl_id(_z_writer_filter_ctx_t *ctx, uint32_t id) {
+    uint32_t *alloc_id = (uint32_t *)z_malloc(sizeof(uint32_t));
+    if (alloc_id == NULL) {
+        _Z_ERROR("Failed to allocate declare id.");
+        return false;
+    }
+    *alloc_id = id;
+    ctx->decl_ids = _z_decl_id_list_push(ctx->decl_ids, alloc_id);
+    if (ctx->decl_ids == NULL) {  // Allocation can fail
+        return false;
+    }
+    return true;
+}
+
 static void _z_write_filter_callback(const _z_interest_msg_t *msg, void *arg) {
     _z_writer_filter_ctx_t *ctx = (_z_writer_filter_ctx_t *)arg;
 
@@ -36,28 +64,32 @@ static void _z_write_filter_callback(const _z_interest_msg_t *msg, void *arg) {
 
                 case _Z_INTEREST_MSG_TYPE_DECL_SUBSCRIBER:
                 case _Z_INTEREST_MSG_TYPE_DECL_QUERYABLE:
-                    ctx->state = WRITE_FILTER_OFF;
-                    ctx->decl_id = msg->id;
+                    if (_z_write_filter_push_decl_id(ctx, msg->id)) {
+                        ctx->state = WRITE_FILTER_OFF;
+                    }
                     break;
 
                 default:  // Nothing to do
                     break;
             }
             break;
-        // Remove filter if we receive a subscribe
+        // Remove filter if we have targets
         case WRITE_FILTER_ACTIVE:
             if (msg->type == _Z_INTEREST_MSG_TYPE_DECL_SUBSCRIBER || msg->type == _Z_INTEREST_MSG_TYPE_DECL_QUERYABLE) {
-                ctx->state = WRITE_FILTER_OFF;
-                ctx->decl_id = msg->id;
+                if (_z_write_filter_push_decl_id(ctx, msg->id)) {
+                    ctx->state = WRITE_FILTER_OFF;
+                }
             }
             break;
-        // Activate filter if subscribe is removed
+        // Remove target
         case WRITE_FILTER_OFF:
             if ((msg->type == _Z_INTEREST_MSG_TYPE_UNDECL_SUBSCRIBER ||
-                 msg->type == _Z_INTEREST_MSG_TYPE_UNDECL_QUERYABLE) &&
-                (ctx->decl_id == msg->id)) {
-                ctx->state = WRITE_FILTER_ACTIVE;
-                ctx->decl_id = 0;
+                 msg->type == _Z_INTEREST_MSG_TYPE_UNDECL_QUERYABLE)) {
+                ctx->decl_ids = _z_decl_id_list_drop_filter(ctx->decl_ids, _z_decl_id_eq, &msg->id);
+                // Activate filter if no more targets
+                if (ctx->decl_ids == NULL) {
+                    ctx->state = WRITE_FILTER_ACTIVE;
+                }
             }
             break;
         // Nothing to do
@@ -75,8 +107,8 @@ z_result_t _z_write_filter_create(_z_session_t *zn, _z_write_filter_t *filter, _
     if (ctx == NULL) {
         return _Z_ERR_SYSTEM_OUT_OF_MEMORY;
     }
-    ctx->state = WRITE_FILTER_INIT;
-    ctx->decl_id = 0;
+    ctx->state = (zn->_mode == Z_WHATAMI_CLIENT) ? WRITE_FILTER_INIT : WRITE_FILTER_ACTIVE;
+    ctx->decl_ids = _z_decl_id_list_new();
 
     filter->ctx = ctx;
     filter->_interest_id = _z_add_interest(zn, keyexpr, _z_write_filter_callback, flags, (void *)ctx);
