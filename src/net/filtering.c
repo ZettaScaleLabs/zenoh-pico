@@ -23,6 +23,7 @@
 #include "zenoh-pico/session/session.h"
 
 #if Z_FEATURE_INTEREST == 1
+
 void _z_filter_target_elem_free(void **e) {
     _z_filter_target_t *ptr = (_z_filter_target_t *)*e;
     if (ptr != NULL) {
@@ -31,11 +32,25 @@ void _z_filter_target_elem_free(void **e) {
     }
 }
 
+static bool _z_filter_target_peer_eq(const void *left, const void *right) {
+    const _z_filter_target_t *left_val = (const _z_filter_target_t *)left;
+    const _z_filter_target_t *right_val = (const _z_filter_target_t *)right;
+    return left_val->peer == right_val->peer;
+}
+
 static bool _z_filter_target_eq(const void *left, const void *right) {
     const _z_filter_target_t *left_val = (const _z_filter_target_t *)left;
     const _z_filter_target_t *right_val = (const _z_filter_target_t *)right;
     return (left_val->peer == right_val->peer) && (left_val->decl_id == right_val->decl_id);
 }
+
+#if Z_FEATURE_MULTI_THREAD == 1
+static void _z_write_filter_mutex_lock(_z_writer_filter_ctx_t *ctx) { _z_mutex_lock(&ctx->mutex); }
+static void _z_write_filter_mutex_unlock(_z_writer_filter_ctx_t *ctx) { _z_mutex_unlock(&ctx->mutex); }
+#else
+static void _z_write_filter_mutex_lock(_z_writer_filter_ctx_t *ctx) { _ZP_UNUSED(ctx); }
+static void _z_write_filter_mutex_unlock(_z_writer_filter_ctx_t *ctx) { _ZP_UNUSED(ctx); }
+#endif
 
 static bool _z_write_filter_push_target(_z_writer_filter_ctx_t *ctx, _z_transport_peer_common_t *peer, uint32_t id) {
     _z_filter_target_t *target = (_z_filter_target_t *)z_malloc(sizeof(_z_filter_target_t));
@@ -45,7 +60,9 @@ static bool _z_write_filter_push_target(_z_writer_filter_ctx_t *ctx, _z_transpor
     }
     target->peer = (uintptr_t)peer;
     target->decl_id = id;
+    _z_write_filter_mutex_lock(ctx);
     ctx->targets = _z_filter_target_list_push(ctx->targets, target);
+    _z_write_filter_mutex_unlock(ctx);
     if (ctx->targets == NULL) {  // Allocation can fail
         return false;
     }
@@ -53,50 +70,51 @@ static bool _z_write_filter_push_target(_z_writer_filter_ctx_t *ctx, _z_transpor
 }
 
 static void _z_write_filter_callback(const _z_interest_msg_t *msg, _z_transport_peer_common_t *peer, void *arg) {
-    // TODO: clear filter if peers disconnect
     _z_writer_filter_ctx_t *ctx = (_z_writer_filter_ctx_t *)arg;
-    
-    switch (ctx->state) {
-        // Update init state
-        case WRITE_FILTER_INIT:
-            switch (msg->type) {
-                case _Z_INTEREST_MSG_TYPE_FINAL:
-                    ctx->state = WRITE_FILTER_ACTIVE;  // No subscribers
-                    break;
-
-                case _Z_INTEREST_MSG_TYPE_DECL_SUBSCRIBER:
-                case _Z_INTEREST_MSG_TYPE_DECL_QUERYABLE:
-                    if (_z_write_filter_push_target(ctx, peer, msg->id)) {
-                        ctx->state = WRITE_FILTER_OFF;
-                    }
-                    break;
-
-                default:  // Nothing to do
-                    break;
-            }
+    // Process message
+    switch (msg->type) {
+        case _Z_INTEREST_MSG_TYPE_DECL_SUBSCRIBER:
+        case _Z_INTEREST_MSG_TYPE_DECL_QUERYABLE:
+            _z_write_filter_push_target(ctx, peer, msg->id);
             break;
-        // Remove filter if we have targets
-        case WRITE_FILTER_ACTIVE:
-            if (msg->type == _Z_INTEREST_MSG_TYPE_DECL_SUBSCRIBER || msg->type == _Z_INTEREST_MSG_TYPE_DECL_QUERYABLE) {
-                if (_z_write_filter_push_target(ctx, peer, msg->id)) {
-                    ctx->state = WRITE_FILTER_OFF;
-                }
-            }
-            break;
-        // Remove target
-        case WRITE_FILTER_OFF:
-            if ((msg->type == _Z_INTEREST_MSG_TYPE_UNDECL_SUBSCRIBER ||
-                 msg->type == _Z_INTEREST_MSG_TYPE_UNDECL_QUERYABLE)) {
-                _z_filter_target_t target = {.decl_id = msg->id, .peer = (uintptr_t)peer};
-                ctx->targets = _z_filter_target_list_drop_filter(ctx->targets, _z_filter_target_eq, &target);
-                // Activate filter if no more targets
-                if (ctx->targets == NULL) {
-                    ctx->state = WRITE_FILTER_ACTIVE;
-                }
-            }
-            break;
-        // Nothing to do
+        case _Z_INTEREST_MSG_TYPE_UNDECL_SUBSCRIBER:
+        case _Z_INTEREST_MSG_TYPE_UNDECL_QUERYABLE: {
+            _z_filter_target_t target = {.decl_id = msg->id, .peer = (uintptr_t)peer};
+            _z_write_filter_mutex_lock(ctx);
+            ctx->targets = _z_filter_target_list_drop_filter(ctx->targets, _z_filter_target_eq, &target);
+            _z_write_filter_mutex_unlock(ctx);
+        } break;
+        case _Z_INTEREST_MSG_TYPE_CONNECTION_DROPPED: {
+            _z_filter_target_t target = {.decl_id = 0, .peer = (uintptr_t)peer};
+            _z_write_filter_mutex_lock(ctx);
+            ctx->targets = _z_filter_target_list_drop_filter(ctx->targets, _z_filter_target_peer_eq, &target);
+            _z_write_filter_mutex_unlock(ctx);
+        } break;
         default:
+            break;
+    }
+    // Process filter state
+    switch (ctx->state) {
+        default:
+        case WRITE_FILTER_INIT:
+            // Update init state
+            if (ctx->targets == NULL) {
+                ctx->state = WRITE_FILTER_ACTIVE;
+            } else {
+                ctx->state = WRITE_FILTER_OFF;
+            }
+            break;
+        case WRITE_FILTER_ACTIVE:
+            // Deactivate filter if no more targets
+            if (ctx->targets != NULL) {
+                ctx->state = WRITE_FILTER_OFF;
+            }
+            break;
+        case WRITE_FILTER_OFF:
+            // Activate filter if no more targets
+            if (ctx->targets == NULL) {
+                ctx->state = WRITE_FILTER_ACTIVE;
+            }
             break;
     }
 }
@@ -110,7 +128,12 @@ z_result_t _z_write_filter_create(_z_session_t *zn, _z_write_filter_t *filter, _
     if (ctx == NULL) {
         return _Z_ERR_SYSTEM_OUT_OF_MEMORY;
     }
-    ctx->state = (zn->_mode == Z_WHATAMI_CLIENT) ? WRITE_FILTER_INIT : WRITE_FILTER_ACTIVE;
+#if Z_FEATURE_MULTI_THREAD == 1
+    _Z_RETURN_IF_ERR(_z_mutex_init(&ctx->mutex));
+#endif
+    // FIXME: Require interest protocol profile implementation
+    // ctx->state = (zn->_mode == Z_WHATAMI_CLIENT) ? WRITE_FILTER_INIT : WRITE_FILTER_ACTIVE;
+    ctx->state = WRITE_FILTER_INIT;
     ctx->targets = _z_filter_target_list_new();
 
     filter->ctx = ctx;
@@ -125,6 +148,10 @@ z_result_t _z_write_filter_create(_z_session_t *zn, _z_write_filter_t *filter, _
 z_result_t _z_write_filter_destroy(_z_session_t *zn, _z_write_filter_t *filter) {
     if (filter->ctx != NULL) {
         z_result_t res = _z_remove_interest(zn, filter->_interest_id);
+        _z_filter_target_list_free(&filter->ctx->targets);
+#if Z_FEATURE_MULTI_THREAD == 1
+        _z_mutex_drop(&filter->ctx->mutex);
+#endif
         z_free(filter->ctx);
         filter->ctx = NULL;
         return res;

@@ -47,6 +47,9 @@ typedef enum {
 } _z_write_filter_state_t;
 
 typedef struct {
+#if Z_FEATURE_MULTI_THREAD == 1
+    _z_mutex_t mutex;
+#endif
     _z_filter_target_list_t *targets;
     uint8_t state;
 } _z_writer_filter_ctx_t;
