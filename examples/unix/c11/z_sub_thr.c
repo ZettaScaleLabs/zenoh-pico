@@ -79,8 +79,9 @@ int main(int argc, char **argv) {
 
     // Open session
     z_owned_session_t s;
-    if (z_open(&s, z_move(config), NULL) < 0) {
-        printf("Unable to open session!\n");
+    int ret = z_open(&s, z_move(config), NULL);
+    if (ret < 0) {
+        printf("Unable to open session! (result: %d)\n", ret);
         exit(-1);
     }
     // Start read and lease tasks for zenoh-pico

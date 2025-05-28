@@ -63,8 +63,9 @@ int main(int argc, char** argv) {
     }
 
     z_owned_session_t session;
-    if (z_open(&session, z_move(config), NULL) < 0) {
-        printf("Unable to open session!\n");
+    int ret = z_open(&session, z_move(config), NULL);
+    if (ret < 0) {
+        printf("Unable to open session! (result: %d)\n", ret);
         return -1;
     }
     if (zp_start_read_task(z_loan_mut(session), NULL) < 0) {
