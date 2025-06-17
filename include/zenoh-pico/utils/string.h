@@ -68,6 +68,11 @@ size_t _z_strcnt(char const *haystack_start, const char *harstack_end, const cha
 
 size_t _z_str_startswith(const char *s, const char *needle);
 
+/*
+ * Convert a non null terminated `_z_str_se_t` to a uint32_t.
+ */
+bool _z_str_se_atoui(const _z_str_se_t *str, uint32_t *result);
+
 #ifdef __cplusplus
 }
 #endif
