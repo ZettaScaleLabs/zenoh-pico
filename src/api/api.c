@@ -592,14 +592,14 @@ void ze_closure_miss_call(const ze_loaned_closure_miss_t *closure, const ze_miss
     }
 }
 
-bool _z_config_check(const _z_config_t *config) { return !_z_str_intmap_is_empty(config); }
-_z_config_t _z_config_null(void) { return _z_str_intmap_make(); }
-z_result_t _z_config_copy(_z_config_t *dst, const _z_config_t *src) {
-    *dst = _z_str_intmap_clone(src);
-    return _Z_RES_OK;
+bool _z_config_check(const _z_config_t *config) { return !_z_config_is_empty(config); }
+_z_config_t _z_config_null(void) {
+    _z_config_t config;
+    _z_config_init(&config);
+    return config;
 }
-void _z_config_drop(_z_config_t *config) { _z_str_intmap_clear(config); }
-_Z_OWNED_FUNCTIONS_VALUE_IMPL(_z_config_t, config, _z_config_check, _z_config_null, _z_config_copy, _z_str_intmap_move,
+void _z_config_drop(_z_config_t *config) { _z_config_clear(config); }
+_Z_OWNED_FUNCTIONS_VALUE_IMPL(_z_config_t, config, _z_config_check, _z_config_null, _z_config_copy, _z_config_move,
                               _z_config_drop)
 
 _Z_OWNED_FUNCTIONS_VALUE_IMPL(_z_string_t, string, _z_string_check, _z_string_null, _z_string_copy, _z_string_move,
@@ -827,16 +827,12 @@ z_result_t z_scout(z_moved_config_t *config, z_moved_closure_hello_t *callback, 
     if (options != NULL) {
         what = options->what;
     } else {
-        char *opt_as_str = _z_config_get(&config->_this._val, Z_CONFIG_SCOUTING_WHAT_KEY);
-        if (opt_as_str == NULL) {
-            opt_as_str = (char *)Z_CONFIG_SCOUTING_WHAT_DEFAULT;
-        }
-        what = strtol(opt_as_str, NULL, 10);
+        what = config->_this._val._scouting_what._parsed;
     }
 
-    char *opt_as_str = _z_config_get(&config->_this._val, Z_CONFIG_MULTICAST_LOCATOR_KEY);
+    const char *opt_as_str = _z_config_get(&config->_this._val, Z_CONFIG_MULTICAST_LOCATOR_KEY);
     if (opt_as_str == NULL) {
-        opt_as_str = (char *)Z_CONFIG_MULTICAST_LOCATOR_DEFAULT;
+        opt_as_str = Z_CONFIG_MULTICAST_LOCATOR_DEFAULT;
     }
     _z_string_t mcast_locator = _z_string_alias_str(opt_as_str);
 
@@ -844,18 +840,12 @@ z_result_t z_scout(z_moved_config_t *config, z_moved_closure_hello_t *callback, 
     if (options != NULL) {
         timeout = options->timeout_ms;
     } else {
-        opt_as_str = _z_config_get(&config->_this._val, Z_CONFIG_SCOUTING_TIMEOUT_KEY);
-        if (opt_as_str == NULL) {
-            opt_as_str = (char *)Z_CONFIG_SCOUTING_TIMEOUT_DEFAULT;
-        }
-        timeout = (uint32_t)strtoul(opt_as_str, NULL, 10);
+        timeout = (uint32_t)config->_this._val._scouting_timeout._parsed;
     }
 
-    _z_id_t zid = _z_id_empty();
-    char *zid_str = _z_config_get(&config->_this._val, Z_CONFIG_SESSION_ZID_KEY);
-    if (zid_str != NULL) {
-        _z_uuid_to_bytes(zid.id, zid_str);
-    }
+    // The session ZID is validated and parsed at insert time, so it can be read
+    // directly (defaulting to the empty id when unset).
+    _z_id_t zid = config->_this._val._session_zid._parsed;
 
     _z_scout(what, zid, &mcast_locator, timeout, __z_hello_handler, wrapped_ctx, callback->_this._val.drop, ctx);
 
@@ -882,11 +872,10 @@ void z_open_options_default(z_open_options_t *options) {
 }
 
 static _z_id_t _z_session_get_zid(const _z_config_t *config) {
-    _z_id_t zid = _z_id_empty();
-    char *opt_as_str = _z_config_get(config, Z_CONFIG_SESSION_ZID_KEY);
-    if (opt_as_str != NULL) {
-        _z_uuid_to_bytes(zid.id, opt_as_str);
-    } else {
+    // The session ZID is validated and parsed at insert time. When it was not
+    // explicitly set, generate a random one.
+    _z_id_t zid = config->_session_zid._parsed;
+    if (!_z_id_check(zid)) {
         _z_session_generate_zid(&zid, Z_ZID_LENGTH);
     }
     return zid;
