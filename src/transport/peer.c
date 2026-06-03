@@ -131,14 +131,6 @@ void _z_transport_peer_multicast_clear(_z_transport_peer_multicast_t *src) {
     _z_transport_peer_common_clear(&src->common);
 }
 
-void _z_transport_peer_multicast_copy(_z_transport_peer_multicast_t *dst, const _z_transport_peer_multicast_t *src) {
-    dst->_sn_res = src->_sn_res;
-    _z_conduit_sn_list_copy(&dst->_sn_rx_sns, &src->_sn_rx_sns);
-    dst->_lease = src->_lease;
-    _z_slice_copy(&dst->_remote_addr, &src->_remote_addr);
-    _z_transport_peer_common_copy(&dst->common, &src->common);
-}
-
 size_t _z_transport_peer_multicast_size(const _z_transport_peer_multicast_t *src) {
     _ZP_UNUSED(src);
     return sizeof(_z_transport_peer_multicast_t);
