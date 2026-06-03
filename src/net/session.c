@@ -20,6 +20,7 @@
 #include <stdlib.h>
 
 #include "zenoh-pico/api/constants.h"
+#include "zenoh-pico/collections/algorithms_template.h"
 #include "zenoh-pico/collections/string.h"
 #include "zenoh-pico/config.h"
 #include "zenoh-pico/protocol/core.h"
@@ -693,14 +694,12 @@ bool _z_session_has_router_peer(const _z_session_t *session) {
             peers = _z_transport_peer_unicast_slist_next(peers);
         }
     } else if (session->_tp._type == _Z_TRANSPORT_MULTICAST_TYPE) {
-        _z_transport_peer_multicast_slist_t *peers = session->_tp._transport._multicast._peers;
-        while (peers != NULL) {
-            _z_transport_peer_multicast_t *peer = _z_transport_peer_multicast_slist_value(peers);
-            if (peer->common._remote_whatami == Z_WHATAMI_ROUTER) {
-                return true;
-            }
-            peers = _z_transport_peer_multicast_slist_next(peers);
-        }
+        const _z_transport_peer_multicast_t *peer;
+#define _IS_ROUTER_PEER_FILTER(peer) ((peer)->common._remote_whatami == Z_WHATAMI_ROUTER)
+        _ZP_CFIND_VAL(_z_peer_id_to_transport_peer_multicast_hmap, &session->_tp._transport._multicast._peers, peer,
+                      _IS_ROUTER_PEER_FILTER);
+#undef _IS_ROUTER_PEER_FILTER
+        return (peer != NULL);
     }
     return false;
 }
