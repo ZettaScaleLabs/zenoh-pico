@@ -16,6 +16,7 @@
 
 #include "zenoh-pico/api/encoding.h"
 #include "zenoh-pico/api/primitives.h"
+#include "zenoh-pico/collections/algorithms_template.h"
 #include "zenoh-pico/net/primitives.h"
 #include "zenoh-pico/session/utils.h"
 #include "zenoh-pico/utils/json_encoder.h"
@@ -470,11 +471,11 @@ static z_result_t _ze_admin_space_encode_unicast_peers(_z_json_encoder_t *je,
 }
 
 static z_result_t _ze_admin_space_encode_multicast_peers(_z_json_encoder_t *je,
-                                                         const _z_transport_peer_multicast_slist_t *peers) {
+                                                         const _z_peer_id_to_transport_peer_multicast_hmap_t *peers) {
     _Z_RETURN_IF_ERR(_z_json_encoder_start_array(je));
 
-    for (; peers != NULL; peers = _z_transport_peer_multicast_slist_next(peers)) {
-        const _z_transport_peer_multicast_t *peer = _z_transport_peer_multicast_slist_value(peers);
+    const _z_transport_peer_multicast_t *peer;
+    _ZP_CFOREACH_VAL(_z_peer_id_to_transport_peer_multicast_hmap, peers, peer) {
         _Z_RETURN_IF_ERR(_ze_admin_space_encode_multicast_peer(je, peer));
     }
 
@@ -508,7 +509,7 @@ static z_result_t _ze_admin_space_encode_transport_multicast(_z_json_encoder_t *
         ret = _z_json_encoder_write_key(je, "peers");
     }
     if (ret == _Z_RES_OK) {
-        ret = _ze_admin_space_encode_multicast_peers(je, tp->_peers);
+        ret = _ze_admin_space_encode_multicast_peers(je, &tp->_peers);
     }
 
     _z_transport_peer_mutex_unlock(&tp->_common);
@@ -551,14 +552,14 @@ static z_result_t _ze_admin_space_encode_transport_peers(_z_json_encoder_t *je, 
         case _Z_TRANSPORT_MULTICAST_TYPE: {
             _z_transport_multicast_t *mtp = &tp->_transport._multicast;
             _z_transport_peer_mutex_lock(&mtp->_common);
-            ret = _ze_admin_space_encode_multicast_peers(je, mtp->_peers);
+            ret = _ze_admin_space_encode_multicast_peers(je, &mtp->_peers);
             _z_transport_peer_mutex_unlock(&mtp->_common);
             break;
         }
         case _Z_TRANSPORT_RAWETH_TYPE: {
             _z_transport_multicast_t *rtp = &tp->_transport._raweth;
             _z_transport_peer_mutex_lock(&rtp->_common);
-            ret = _ze_admin_space_encode_multicast_peers(je, rtp->_peers);
+            ret = _ze_admin_space_encode_multicast_peers(je, &rtp->_peers);
             _z_transport_peer_mutex_unlock(&rtp->_common);
             break;
         }
@@ -704,10 +705,8 @@ static void _ze_admin_space_query_handle_pico_transport_0_multicast_peers(const 
                                                                           _ze_admin_space_reply_list_t **replies) {
     _z_transport_peer_mutex_lock(&tp->_common);
 
-    for (_z_transport_peer_multicast_slist_t *peers = tp->_peers; peers != NULL;
-         peers = _z_transport_peer_multicast_slist_next(peers)) {
-        const _z_transport_peer_multicast_t *peer = _z_transport_peer_multicast_slist_value(peers);
-
+    const _z_transport_peer_multicast_t *peer;
+    _ZP_CFOREACH_VAL(_z_peer_id_to_transport_peer_multicast_hmap, &tp->_peers, peer) {
         z_owned_keyexpr_t ke;
         z_result_t ret;
 

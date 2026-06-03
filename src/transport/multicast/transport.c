@@ -100,7 +100,8 @@ z_result_t _z_multicast_transport_create(_z_transport_t *zt, _z_link_t *zl,
         ztm->_common._sn_tx_best_effort = param->_initial_sn_tx._val._plain._best_effort;
 
         // Initialize peer list
-        ztm->_peers = _z_transport_peer_multicast_slist_new();
+        ztm->_common._next_peer_id = 0;
+        _z_peer_id_to_transport_peer_multicast_hmap_init(&ztm->_peers);
 
         ztm->_common._lease = Z_TRANSPORT_LEASE;
 
@@ -175,7 +176,7 @@ z_result_t _z_multicast_transport_close(_z_transport_multicast_t *ztm, uint8_t r
 }
 
 void _z_multicast_transport_clear(_z_transport_multicast_t *ztm) {
-    _z_transport_peer_multicast_slist_free(&ztm->_peers);
+    _z_peer_id_to_transport_peer_multicast_hmap_destroy(&ztm->_peers);
     _z_transport_common_clear(
         &ztm->_common);  // free common in the very end, as peers might access the link data in common while being freed
     _z_slice_clear(&ztm->_zbuf_addr);
