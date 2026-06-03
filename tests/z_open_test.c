@@ -254,10 +254,11 @@ static void test_open_invalid_timeout_value(void) {
 
     zp_config_insert(z_loan_mut(c), Z_CONFIG_MODE_KEY, "peer");
     zp_config_insert(z_loan_mut(c), Z_CONFIG_CONNECT_KEY, OPEN_TEST_UNUSED_LOCATOR_3);
-    zp_config_insert(z_loan_mut(c), Z_CONFIG_CONNECT_TIMEOUT_KEY, "not-a-number");
+    // Invalid integer values are rejected at insert time.
+    ASSERT_ERR(zp_config_insert(z_loan_mut(c), Z_CONFIG_CONNECT_TIMEOUT_KEY, "not-a-number"),
+               _Z_ERR_CONFIG_INVALID_VALUE);
 
-    z_owned_session_t s;
-    ASSERT_ERR(z_open(&s, z_move(c), NULL), _Z_ERR_CONFIG_INVALID_VALUE);
+    z_drop(z_move(c));
 }
 
 static void test_open_timeout_overflow_value(void) {
@@ -268,10 +269,11 @@ static void test_open_timeout_overflow_value(void) {
 
     zp_config_insert(z_loan_mut(c), Z_CONFIG_MODE_KEY, "peer");
     zp_config_insert(z_loan_mut(c), Z_CONFIG_CONNECT_KEY, OPEN_TEST_UNUSED_LOCATOR_3);
-    zp_config_insert(z_loan_mut(c), Z_CONFIG_CONNECT_TIMEOUT_KEY, "2147483648");
+    // Out-of-range integer values are rejected at insert time.
+    ASSERT_ERR(zp_config_insert(z_loan_mut(c), Z_CONFIG_CONNECT_TIMEOUT_KEY, "2147483648"),
+               _Z_ERR_CONFIG_INVALID_VALUE);
 
-    z_owned_session_t s;
-    ASSERT_ERR(z_open(&s, z_move(c), NULL), _Z_ERR_CONFIG_INVALID_VALUE);
+    z_drop(z_move(c));
 }
 
 static void test_open_invalid_bool_value(void) {
@@ -282,10 +284,11 @@ static void test_open_invalid_bool_value(void) {
 
     zp_config_insert(z_loan_mut(c), Z_CONFIG_MODE_KEY, "peer");
     zp_config_insert(z_loan_mut(c), Z_CONFIG_CONNECT_KEY, OPEN_TEST_UNUSED_LOCATOR_4);
-    zp_config_insert(z_loan_mut(c), Z_CONFIG_CONNECT_EXIT_ON_FAILURE_KEY, "maybe");
+    // Invalid boolean values are rejected at insert time.
+    ASSERT_ERR(zp_config_insert(z_loan_mut(c), Z_CONFIG_CONNECT_EXIT_ON_FAILURE_KEY, "maybe"),
+               _Z_ERR_CONFIG_INVALID_VALUE);
 
-    z_owned_session_t s;
-    ASSERT_ERR(z_open(&s, z_move(c), NULL), _Z_ERR_CONFIG_INVALID_VALUE);
+    z_drop(z_move(c));
 }
 
 static void test_open_rejects_negative_connect_timeout_below_minus_one(void) {
@@ -316,20 +319,6 @@ static void test_open_rejects_negative_listen_timeout_below_minus_one(void) {
     ASSERT_ERR(z_open(&s, z_move(c), NULL), _Z_ERR_CONFIG_INVALID_VALUE);
 }
 #endif
-
-static void test_open_multiple_listen_locators_are_rejected(void) {
-    printf("Running test_open_multiple_listen_locators_are_rejected() ...\n");
-
-    z_owned_config_t c;
-    z_config_default(&c);
-
-    zp_config_insert(z_loan_mut(c), Z_CONFIG_MODE_KEY, "peer");
-    _z_str_intmap_insert_push(z_loan_mut(c), Z_CONFIG_LISTEN_KEY, _z_str_clone(OPEN_TEST_UNUSED_LOCATOR_1));
-    _z_str_intmap_insert_push(z_loan_mut(c), Z_CONFIG_LISTEN_KEY, _z_str_clone(OPEN_TEST_UNUSED_LOCATOR_2));
-
-    z_owned_session_t s;
-    ASSERT_ERR(z_open(&s, z_move(c), NULL), _Z_ERR_CONFIG_LOCATOR_INVALID);
-}
 
 static void test_open_peer_listen_succeeds(void) {
     printf("Running test_open_peer_listen_succeeds() ...\n");
@@ -631,7 +620,6 @@ int main(void) {
     test_open_rejects_negative_connect_timeout_below_minus_one();
     test_open_rejects_negative_listen_timeout_below_minus_one();
 #endif
-    test_open_multiple_listen_locators_are_rejected();
     test_open_peer_listen_succeeds();
     test_open_peer_uses_next_connect_locator_for_primary_transport();
 

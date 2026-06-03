@@ -51,23 +51,17 @@
 static z_result_t _z_locators_by_scout(const _z_config_t *config, const _z_id_t *zid, _z_string_svec_t *locators) {
     z_result_t ret = _Z_RES_OK;
 
-    char *opt_as_str = _z_config_get(config, Z_CONFIG_SCOUTING_WHAT_KEY);
-    if (opt_as_str == NULL) {
-        opt_as_str = (char *)Z_CONFIG_SCOUTING_WHAT_DEFAULT;
-    }
-    z_what_t what = strtol(opt_as_str, NULL, 10);
+    // Integer scouting properties hold their (pre-filled) default parsed value
+    // when unset, so they can be read directly.
+    z_what_t what = config->_scouting_what._parsed;
 
-    opt_as_str = _z_config_get(config, Z_CONFIG_MULTICAST_LOCATOR_KEY);
+    const char *opt_as_str = _z_config_get(config, Z_CONFIG_MULTICAST_LOCATOR_KEY);
     if (opt_as_str == NULL) {
-        opt_as_str = (char *)Z_CONFIG_MULTICAST_LOCATOR_DEFAULT;
+        opt_as_str = Z_CONFIG_MULTICAST_LOCATOR_DEFAULT;
     }
     _z_string_t mcast_locator = _z_string_alias_str(opt_as_str);
 
-    opt_as_str = _z_config_get(config, Z_CONFIG_SCOUTING_TIMEOUT_KEY);
-    if (opt_as_str == NULL) {
-        opt_as_str = (char *)Z_CONFIG_SCOUTING_TIMEOUT_DEFAULT;
-    }
-    uint32_t timeout = (uint32_t)strtoul(opt_as_str, NULL, 10);
+    uint32_t timeout = (uint32_t)config->_scouting_timeout._parsed;
 
     // Scout and return upon the first result
     _z_hello_slist_t *hellos = _z_scout_inner(what, *zid, &mcast_locator, timeout, true);
@@ -111,24 +105,6 @@ static z_result_t _z_locators_by_config(_z_config_t *config, _z_string_svec_t *l
     }
 
     return _Z_RES_OK;
-}
-
-static z_result_t _z_config_get_mode(const _z_config_t *config, z_whatami_t *mode) {
-    z_result_t ret = _Z_RES_OK;
-    char *s_mode = _z_config_get(config, Z_CONFIG_MODE_KEY);
-    *mode = Z_WHATAMI_CLIENT;  // By default, zenoh-pico will operate as a client
-    if (s_mode != NULL) {
-        if (_z_str_eq(s_mode, Z_CONFIG_MODE_CLIENT) == true) {
-            *mode = Z_WHATAMI_CLIENT;
-        } else if (_z_str_eq(s_mode, Z_CONFIG_MODE_PEER) == true) {
-            *mode = Z_WHATAMI_PEER;
-        } else {
-            _Z_ERROR("Trying to configure an invalid mode: %s", s_mode);
-            _Z_ERROR_LOG(_Z_ERR_CONFIG_INVALID_MODE);
-            ret = _Z_ERR_CONFIG_INVALID_MODE;
-        }
-    }
-    return ret;
 }
 
 static z_result_t _z_open_inner(_z_session_rc_t *zs, _z_string_t *locator, const _z_id_t *zid, int peer_op,
@@ -386,9 +362,12 @@ static inline z_result_t _z_validate_open_timeout(int32_t timeout_ms) {
     return (timeout_ms >= -1) ? _Z_RES_OK : _Z_ERR_CONFIG_INVALID_VALUE;
 }
 
-static inline const char *_z_open_connect_exit_on_failure_default(z_whatami_t mode) {
-    return (mode == Z_WHATAMI_CLIENT) ? Z_CONFIG_CONNECT_EXIT_ON_FAILURE_CLIENT_DEFAULT
-                                      : Z_CONFIG_CONNECT_EXIT_ON_FAILURE_PEER_DEFAULT;
+static inline bool _z_open_connect_exit_on_failure_default(z_whatami_t mode) {
+    const char *s = (mode == Z_WHATAMI_CLIENT) ? Z_CONFIG_CONNECT_EXIT_ON_FAILURE_CLIENT_DEFAULT
+                                               : Z_CONFIG_CONNECT_EXIT_ON_FAILURE_PEER_DEFAULT;
+    bool out = false;
+    (void)_z_str_parse_bool(s, &out);
+    return out;
 }
 
 z_result_t _z_open_locators(_z_session_rc_t *zn, const _z_string_svec_t *listen_locators,
@@ -412,45 +391,18 @@ z_result_t _z_open_locators(_z_session_rc_t *zn, const _z_string_svec_t *listen_
         return _Z_ERR_CONFIG_LOCATOR_INVALID;
     }
 
-    int32_t listen_timeout_ms;
-    bool listen_exit_on_failure;
-    int32_t connect_timeout_ms;
-    bool connect_exit_on_failure;
+    // Boolean and integer properties hold their (pre-filled) default parsed value
+    // when unset, and are validated at insert time, so they can be read directly.
+    // `_connect_exit_on_failure` is the exception: its default is mode-dependent
+    // and resolved here.
+    bool listen_exit_on_failure = config->_listen_exit_on_failure._parsed;
+    bool connect_exit_on_failure =
+        _z_config_bool_get_or_default(config->_connect_exit_on_failure, _z_open_connect_exit_on_failure_default(mode));
 
-#if defined(Z_FEATURE_UNSTABLE_API)
-    _Z_RETURN_IF_ERR(_z_config_get_i32_default(config, Z_CONFIG_LISTEN_TIMEOUT_KEY, Z_CONFIG_LISTEN_TIMEOUT_DEFAULT,
-                                               &listen_timeout_ms));
+    int32_t listen_timeout_ms = config->_listen_timeout._parsed;
+    int32_t connect_timeout_ms = config->_connect_timeout._parsed;
     _Z_RETURN_IF_ERR(_z_validate_open_timeout(listen_timeout_ms));
-
-    _Z_RETURN_IF_ERR(_z_config_get_bool_default(config, Z_CONFIG_LISTEN_EXIT_ON_FAILURE_KEY,
-                                                Z_CONFIG_LISTEN_EXIT_ON_FAILURE_DEFAULT, &listen_exit_on_failure));
-
-    _Z_RETURN_IF_ERR(_z_config_get_i32_default(config, Z_CONFIG_CONNECT_TIMEOUT_KEY, Z_CONFIG_CONNECT_TIMEOUT_DEFAULT,
-                                               &connect_timeout_ms));
     _Z_RETURN_IF_ERR(_z_validate_open_timeout(connect_timeout_ms));
-
-    const char *connect_exit_default = _z_open_connect_exit_on_failure_default(mode);
-    _Z_RETURN_IF_ERR(_z_config_get_bool_default(config, Z_CONFIG_CONNECT_EXIT_ON_FAILURE_KEY, connect_exit_default,
-                                                &connect_exit_on_failure));
-#else
-    if (!_z_str_parse_i32(Z_CONFIG_LISTEN_TIMEOUT_DEFAULT, &listen_timeout_ms)) {
-        return _Z_ERR_CONFIG_INVALID_VALUE;
-    }
-    _Z_RETURN_IF_ERR(_z_validate_open_timeout(listen_timeout_ms));
-
-    if (!_z_str_parse_bool(Z_CONFIG_LISTEN_EXIT_ON_FAILURE_DEFAULT, &listen_exit_on_failure)) {
-        return _Z_ERR_CONFIG_INVALID_VALUE;
-    }
-
-    if (!_z_str_parse_i32(Z_CONFIG_CONNECT_TIMEOUT_DEFAULT, &connect_timeout_ms)) {
-        return _Z_ERR_CONFIG_INVALID_VALUE;
-    }
-    _Z_RETURN_IF_ERR(_z_validate_open_timeout(connect_timeout_ms));
-
-    if (!_z_str_parse_bool(_z_open_connect_exit_on_failure_default(mode), &connect_exit_on_failure)) {
-        return _Z_ERR_CONFIG_INVALID_VALUE;
-    }
-#endif
 
     switch (mode) {
         case Z_WHATAMI_CLIENT:
@@ -517,21 +469,20 @@ z_result_t _z_open(_z_session_rc_t *zn, _z_config_t *config, const _z_id_t *zid)
 
     ret = _z_locators_by_config(config, &listen_locators, &connect_locators);
     if (ret == _Z_RES_OK) {
-        z_whatami_t mode;
-        ret = _z_config_get_mode(config, &mode);
-        if (ret == _Z_RES_OK) {
-            _Z_RC_IN_VAL(zn)->_mode = mode;
+        // The mode is validated and parsed at insert time, so it can be read
+        // directly (defaulting to client when unset).
+        z_whatami_t mode = config->_mode._parsed;
+        _Z_RC_IN_VAL(zn)->_mode = mode;
 
-            if ((_z_string_svec_len(&listen_locators) > 0) || (_z_string_svec_len(&connect_locators) > 0)) {
-                ret = _z_open_locators(zn, &listen_locators, &connect_locators, zid, config, mode);
-            } else {
-                ret = _z_locators_by_scout(config, zid, &connect_locators);
-                if (ret == _Z_RES_OK) {
-                    if (_z_string_svec_len(&connect_locators) == 0) {
-                        ret = _Z_ERR_SCOUT_NO_RESULTS;
-                    } else {
-                        ret = _z_open_locators(zn, &listen_locators, &connect_locators, zid, config, mode);
-                    }
+        if ((_z_string_svec_len(&listen_locators) > 0) || (_z_string_svec_len(&connect_locators) > 0)) {
+            ret = _z_open_locators(zn, &listen_locators, &connect_locators, zid, config, mode);
+        } else {
+            ret = _z_locators_by_scout(config, zid, &connect_locators);
+            if (ret == _Z_RES_OK) {
+                if (_z_string_svec_len(&connect_locators) == 0) {
+                    ret = _Z_ERR_SCOUT_NO_RESULTS;
+                } else {
+                    ret = _z_open_locators(zn, &listen_locators, &connect_locators, zid, config, mode);
                 }
             }
         }
@@ -710,30 +661,6 @@ _z_session_rc_t _z_session_weak_upgrade_if_open(const _z_session_weak_t *weak) {
         _z_session_rc_drop(&sess_rc);
     }
     return sess_rc;
-}
-
-_z_config_t *_z_info(const _z_session_t *zn) {
-    _z_config_t *ps = (_z_config_t *)z_malloc(sizeof(_z_config_t));
-    if (ps != NULL) {
-        _z_config_init(ps);
-        _z_string_t s = _z_id_to_string(&zn->_local_zid);
-        _zp_config_insert_string(ps, Z_INFO_PID_KEY, &s);
-        _z_string_clear(&s);
-
-        switch (zn->_tp._type) {
-            case _Z_TRANSPORT_UNICAST_TYPE:
-                _zp_unicast_info_session(&zn->_tp, ps, zn->_mode);
-                break;
-            case _Z_TRANSPORT_MULTICAST_TYPE:
-            case _Z_TRANSPORT_RAWETH_TYPE:
-                _zp_multicast_info_session(&zn->_tp, ps);
-                break;
-            default:
-                break;
-        }
-    }
-
-    return ps;
 }
 
 z_result_t _zp_read(_z_session_t *zn, bool single_read) { return _z_read(&zn->_tp, single_read); }
