@@ -44,8 +44,8 @@ z_result_t _z_endpoint_tls_valid(_z_endpoint_t *endpoint) {
     return ret;
 }
 
-static _z_config_t _z_tls_merge_config(_z_str_intmap_t *endpoint_cfg, const _z_config_t *session_cfg) {
-    _z_config_t cfg;
+static _z_str_intmap_t _z_tls_merge_config(_z_str_intmap_t *endpoint_cfg, const _z_config_t *session_cfg) {
+    _z_str_intmap_t cfg;
     if (endpoint_cfg != NULL) {
         _z_str_intmap_move(&cfg, endpoint_cfg);
     } else {
@@ -71,12 +71,12 @@ static _z_config_t _z_tls_merge_config(_z_str_intmap_t *endpoint_cfg, const _z_c
                    {TLS_CONFIG_VERIFY_NAME_ON_CONNECT_KEY, Z_CONFIG_TLS_VERIFY_NAME_ON_CONNECT_KEY}};
 
     for (size_t i = 0; i < sizeof(mapping) / sizeof(mapping[0]); i++) {
-        if (_z_config_get(&cfg, mapping[i].locator_key) != NULL) {
+        if (_z_str_intmap_get(&cfg, mapping[i].locator_key) != NULL) {
             continue;
         }
         const char *value = _z_config_get(session_cfg, mapping[i].session_key);
         if (value != NULL) {
-            _zp_config_insert(&cfg, mapping[i].locator_key, value);
+            _z_str_intmap_insert(&cfg, mapping[i].locator_key, _z_str_clone(value));
         }
     }
     return cfg;
@@ -196,7 +196,7 @@ z_result_t _z_new_link_tls(_z_link_t *zl, _z_endpoint_t *endpoint, const _z_conf
 
     zl->_mtu = _z_get_link_mtu_tls();
 
-    _z_config_t cfg = _z_tls_merge_config(&endpoint->_config, session_cfg);
+    _z_str_intmap_t cfg = _z_tls_merge_config(&endpoint->_config, session_cfg);
     zl->_endpoint = *endpoint;
     zl->_endpoint._config = cfg;
     _z_str_intmap_clear(&endpoint->_config);
@@ -236,18 +236,18 @@ z_result_t _z_new_peer_tls(_z_endpoint_t *endpoint, _z_sys_net_socket_t *socket,
         goto cleanup;
     }
 
-    _z_config_t cfg = _z_tls_merge_config(&endpoint->_config, session_cfg);
+    _z_str_intmap_t cfg = _z_tls_merge_config(&endpoint->_config, session_cfg);
     ret = _z_open_tls((_z_tls_socket_t *)socket->_tls_sock, &sys_endpoint, hostname, &cfg, true);
     if (ret != _Z_RES_OK) {
         z_free(socket->_tls_sock);
         socket->_tls_sock = NULL;
-        _z_config_clear(&cfg);
+        _z_str_intmap_clear(&cfg);
         _z_str_intmap_clear(&endpoint->_config);
         goto cleanup;
     }
 
     socket->_fd = ((_z_tls_socket_t *)socket->_tls_sock)->_sock._fd;
-    _z_config_clear(&cfg);
+    _z_str_intmap_clear(&cfg);
     _z_str_intmap_clear(&endpoint->_config);
 
 cleanup:
