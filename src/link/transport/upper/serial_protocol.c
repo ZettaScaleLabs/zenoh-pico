@@ -81,7 +81,6 @@ static z_result_t _z_serial_endpoint_parse(_z_serial_endpoint_cfg_t *cfg, const 
     _z_string_t ser_str = _z_string_alias_str(SERIAL_SCHEMA);
     char *address = NULL;
     char *dot = NULL;
-    const char *baudrate_str = NULL;
 
     (void)memset(cfg, 0, sizeof(*cfg));
 
@@ -89,10 +88,12 @@ static z_result_t _z_serial_endpoint_parse(_z_serial_endpoint_cfg_t *cfg, const 
         return _Z_ERR_CONFIG_LOCATOR_INVALID;
     }
 
-    baudrate_str = _z_str_intmap_get(&endpoint->_config, SERIAL_CONFIG_BAUDRATE_KEY);
-    ret = _z_serial_parse_u32(baudrate_str, &cfg->_baudrate);
-    if (ret != _Z_RES_OK) {
-        return ret;
+    if (!_z_endpoint_config_is_serial(&endpoint->_config)) {
+        return _Z_ERR_CONFIG_LOCATOR_INVALID;
+    }
+    cfg->_baudrate = _z_endpoint_config_get_serial((_z_endpoint_config_t *)&endpoint->_config)->_baudrate;
+    if (cfg->_baudrate == 0) {
+        return _Z_ERR_CONFIG_LOCATOR_INVALID;
     }
 
     address = _z_serial_copy_address(&endpoint->_locator._address);

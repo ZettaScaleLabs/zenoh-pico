@@ -19,6 +19,7 @@
 #include <stdint.h>
 
 #include "zenoh-pico/collections/string.h"
+#include "zenoh-pico/link/endpoint_config.h"
 #include "zenoh-pico/link/transport/tcp.h"
 
 #ifdef __cplusplus
@@ -55,8 +56,8 @@ typedef struct {
 } _z_tls_socket_t;
 
 z_result_t _z_open_tls(_z_tls_socket_t *sock, const _z_sys_net_endpoint_t *rep, const char *hostname,
-                       const _z_str_intmap_t *config, bool peer_socket);
-z_result_t _z_listen_tls(_z_tls_socket_t *sock, const _z_sys_net_endpoint_t *rep, const _z_str_intmap_t *config);
+                       const _z_tls_config_t *config, bool peer_socket);
+z_result_t _z_listen_tls(_z_tls_socket_t *sock, const _z_sys_net_endpoint_t *rep, const _z_tls_config_t *config);
 z_result_t _z_tls_accept(_z_sys_net_socket_t *socket, const _z_sys_net_socket_t *listen_sock);
 void _z_close_tls_socket(_z_sys_net_socket_t *socket);
 void _z_close_tls(_z_tls_socket_t *sock);

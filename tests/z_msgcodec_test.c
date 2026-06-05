@@ -247,7 +247,7 @@ _z_locator_array_t gen_locator_array(size_t size) {
         _z_locator_t *val = &la._val[i];
         val->_protocol = gen_string(3);
         val->_address = gen_string(12);
-        val->_metadata = _z_str_intmap_make();  // @TODO: generate metadata
+        // @TODO: generate protocol-level metadata once it is implemented
     }
 
     return la;

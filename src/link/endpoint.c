@@ -49,13 +49,13 @@
 void _z_locator_init(_z_locator_t *locator) {
     locator->_protocol = _z_string_null();
     locator->_address = _z_string_null();
-    locator->_metadata = _z_str_intmap_make();
+    // @TODO: initialize protocol-level metadata once it is implemented
 }
 
 void _z_locator_clear(_z_locator_t *lc) {
     _z_string_clear(&lc->_protocol);
     _z_string_clear(&lc->_address);
-    _z_str_intmap_clear(&lc->_metadata);
+    // @TODO: clear protocol-level metadata once it is implemented
 }
 
 void _z_locator_free(_z_locator_t **lc) {
@@ -73,8 +73,7 @@ z_result_t _z_locator_copy(_z_locator_t *dst, const _z_locator_t *src) {
     _Z_RETURN_IF_ERR(_z_string_copy(&dst->_protocol, &src->_protocol));
     _Z_RETURN_IF_ERR(_z_string_copy(&dst->_address, &src->_address));
 
-    // @TODO: implement copy for metadata
-    dst->_metadata = _z_str_intmap_make();
+    // @TODO: implement copy for protocol-level metadata once it is implemented
     return _Z_RES_OK;
 }
 
@@ -137,44 +136,9 @@ static z_result_t _z_locator_address_from_string(_z_string_t *address, const _z_
     return _z_string_copy_substring(address, str, start_offset, addr_len);
 }
 
-z_result_t _z_locator_metadata_from_string(_z_str_intmap_t *strint, const _z_string_t *str) {
-    *strint = _z_str_intmap_make();
-
-    // Find metadata separator
-    const char *p_start = (char *)memchr(_z_string_data(str), LOCATOR_METADATA_SEPARATOR, _z_string_len(str));
-    if (p_start == NULL) {
-        return _Z_RES_OK;
-    }
-    p_start = _z_cptr_char_offset(p_start, 1);
-    size_t start_offset = _z_ptr_char_diff(p_start, _z_string_data(str));
-    if (start_offset > _z_string_len(str)) {
-        _Z_ERROR_RETURN(_Z_ERR_CONFIG_LOCATOR_INVALID);
-    }
-    if (start_offset == _z_string_len(str)) {
-        return _Z_RES_OK;
-    }
-
-    const char *p_end = (char *)memchr(_z_string_data(str), ENDPOINT_CONFIG_SEPARATOR, _z_string_len(str));
-    if (p_end == NULL) {
-        p_end = _z_cptr_char_offset(_z_string_data(str), (ptrdiff_t)_z_string_len(str) + 1);
-    }
-
-    if (p_start != p_end) {
-        size_t p_len = _z_ptr_char_diff(p_end, p_start);
-        return _z_str_intmap_from_strn(strint, p_start, 0, NULL, p_len);
-    }
-    return _Z_RES_OK;
-}
-
-size_t _z_locator_metadata_strlen(const _z_str_intmap_t *s) {
-    // @TODO: define protocol-level metadata
-    return _z_str_intmap_strlen(s, 0, NULL);
-}
-
-void _z_locator_metadata_onto_str(char *dst, size_t dst_len, const _z_str_intmap_t *s) {
-    // @TODO: define protocol-level metadata
-    _z_str_intmap_onto_str(dst, dst_len, s, 0, NULL);
-}
+// @TODO: define and implement protocol-level metadata. Locator metadata used to be parsed/serialized here
+// (`_z_locator_metadata_from_string`, `_z_locator_metadata_strlen`, `_z_locator_metadata_onto_str`), but it was never
+// populated nor consumed by any logic, so it was removed. Re-add the parsing/serialization once it is implemented.
 
 z_result_t _z_locator_from_string(_z_locator_t *lc, const _z_string_t *str) {
     if (str == NULL || !_z_string_check(str)) {
@@ -184,8 +148,7 @@ z_result_t _z_locator_from_string(_z_locator_t *lc, const _z_string_t *str) {
     _Z_RETURN_IF_ERR(_z_locator_protocol_from_string(&lc->_protocol, str));
     // Parse address
     _Z_CLEAN_RETURN_IF_ERR(_z_locator_address_from_string(&lc->_address, str), _z_locator_clear(lc));
-    // Parse metadata
-    _Z_CLEAN_RETURN_IF_ERR(_z_locator_metadata_from_string(&lc->_metadata, str), _z_locator_clear(lc));
+    // @TODO: parse protocol-level metadata once it is implemented
     return _Z_RES_OK;
 }
 
@@ -196,12 +159,7 @@ size_t _z_locator_strlen(const _z_locator_t *l) {
         // Calculate the string length to allocate
         ret = _z_string_len(&l->_protocol) + _z_string_len(&l->_address) + 1;
 
-        // @TODO: define protocol-level metadata
-        size_t md_len = _z_locator_metadata_strlen(&l->_metadata);
-        if (md_len > (size_t)0) {
-            ret = ret + (size_t)1;  // Locator metadata separator
-            ret = ret + md_len;     // Locator metadata content
-        }
+        // @TODO: account for protocol-level metadata length once it is implemented
     }
     return ret;
 }
@@ -216,7 +174,6 @@ size_t _z_locator_strlen(const _z_locator_t *l) {
 static void __z_locator_onto_string(_z_string_t *dst, const _z_locator_t *loc) {
     char *curr_dst = (char *)_z_string_data(dst);
     const char psep = LOCATOR_PROTOCOL_SEPARATOR;
-    const char msep = LOCATOR_METADATA_SEPARATOR;
 
     size_t prot_len = _z_string_len(&loc->_protocol);
     size_t addr_len = _z_string_len(&loc->_address);
@@ -234,20 +191,7 @@ static void __z_locator_onto_string(_z_string_t *dst, const _z_locator_t *loc) {
     // Locator address
     memcpy(curr_dst, _z_string_data(&loc->_address), addr_len);
     curr_dst = _z_ptr_char_offset(curr_dst, (ptrdiff_t)addr_len);
-    // @TODO: define protocol-level metadata
-    size_t md_len = _z_locator_metadata_strlen(&loc->_metadata);
-    if (md_len > (size_t)0) {
-        size_t curr_len = _z_string_len(dst) - _z_ptr_char_diff(curr_dst, _z_string_data(dst));
-        if (curr_len == 0) {
-            _Z_ERROR("Buffer too small to write metadata");
-            return;
-        }
-        // Locator metadata separator
-        memcpy(curr_dst, &msep, 1);
-        curr_dst = _z_ptr_char_offset(curr_dst, 1);
-        // Locator metadata
-        _z_locator_metadata_onto_str(curr_dst, curr_len, &loc->_metadata);
-    }
+    // @TODO: serialize protocol-level metadata once it is implemented
 }
 
 /**
@@ -364,12 +308,12 @@ char *_z_endpoint_parse_port(const _z_string_t *addr) {
 /*------------------ Endpoint ------------------*/
 void _z_endpoint_init(_z_endpoint_t *endpoint) {
     _z_locator_init(&endpoint->_locator);
-    endpoint->_config = _z_str_intmap_make();
+    endpoint->_config = _z_endpoint_config_none();
 }
 
 void _z_endpoint_clear(_z_endpoint_t *ep) {
     _z_locator_clear(&ep->_locator);
-    _z_str_intmap_clear(&ep->_config);
+    _z_endpoint_config_destroy(&ep->_config);
 }
 
 void _z_endpoint_free(_z_endpoint_t **ep) {
@@ -377,156 +321,130 @@ void _z_endpoint_free(_z_endpoint_t **ep) {
 
     if (ptr != NULL) {
         _z_locator_clear(&ptr->_locator);
-        _z_str_intmap_clear(&ptr->_config);
+        _z_endpoint_config_destroy(&ptr->_config);
 
         z_free(ptr);
         *ep = NULL;
     }
 }
 
-z_result_t _z_endpoint_config_from_string(_z_str_intmap_t *strint, const _z_string_t *str, _z_string_t *proto) {
+// Parse the `#...` config portion of an endpoint string into the typed variant,
+// dispatching on the locator protocol. `proto` selects the variant alternative;
+// `p_start`/`cfg_size` delimit the raw `key=value;...` body.
+static z_result_t _z_endpoint_typed_config_from_strn(_z_endpoint_config_t *cfg, const _z_string_t *proto,
+                                                     const char *p_start, size_t cfg_size) {
+    _z_string_t cmp_str = _z_string_null();
+#if Z_FEATURE_LINK_TCP == 1
+    cmp_str = _z_string_alias_str(TCP_SCHEMA);
+    if (_z_string_equals(proto, &cmp_str)) {
+        _z_tcp_config_t c;
+        _Z_RETURN_IF_ERR(_z_tcp_config_typed_from_strn(&c, p_start, cfg_size));
+        *cfg = _z_endpoint_config_from_tcp(&c);
+        return _Z_RES_OK;
+    }
+#endif
+#if Z_FEATURE_LINK_UDP_UNICAST == 1 || Z_FEATURE_LINK_UDP_MULTICAST == 1
+    cmp_str = _z_string_alias_str(UDP_SCHEMA);
+    if (_z_string_equals(proto, &cmp_str)) {
+        _z_udp_config_t c;
+        _Z_RETURN_IF_ERR(_z_udp_config_typed_from_strn(&c, p_start, cfg_size));
+        *cfg = _z_endpoint_config_from_udp(&c);
+        return _Z_RES_OK;
+    }
+#endif
+#if Z_FEATURE_LINK_BLUETOOTH == 1
+    cmp_str = _z_string_alias_str(BT_SCHEMA);
+    if (_z_string_equals(proto, &cmp_str)) {
+        _z_bt_config_t c;
+        _Z_RETURN_IF_ERR(_z_bt_config_typed_from_strn(&c, p_start, cfg_size));
+        *cfg = _z_endpoint_config_from_bt(&c);
+        return _Z_RES_OK;
+    }
+#endif
+#if Z_FEATURE_LINK_SERIAL == 1
+    cmp_str = _z_string_alias_str(SERIAL_SCHEMA);
+    if (_z_string_equals(proto, &cmp_str)) {
+        _z_serial_config_t c;
+        _Z_RETURN_IF_ERR(_z_serial_config_typed_from_strn(&c, p_start, cfg_size));
+        *cfg = _z_endpoint_config_from_serial(&c);
+        return _Z_RES_OK;
+    }
+#endif
+#if Z_FEATURE_LINK_WS == 1
+    cmp_str = _z_string_alias_str(WS_SCHEMA);
+    if (_z_string_equals(proto, &cmp_str)) {
+        _z_ws_config_t c;
+        _Z_RETURN_IF_ERR(_z_ws_config_typed_from_strn(&c, p_start, cfg_size));
+        *cfg = _z_endpoint_config_from_ws(&c);
+        return _Z_RES_OK;
+    }
+#endif
+#if Z_FEATURE_LINK_TLS == 1
+    cmp_str = _z_string_alias_str(TLS_SCHEMA);
+    if (_z_string_equals(proto, &cmp_str)) {
+        _z_tls_config_t c;
+        _Z_RETURN_IF_ERR(_z_tls_config_typed_from_strn(&c, p_start, cfg_size));
+        *cfg = _z_endpoint_config_from_tls(&c);
+        return _Z_RES_OK;
+    }
+#endif
+#if Z_FEATURE_RAWETH_TRANSPORT == 1
+    cmp_str = _z_string_alias_str(RAWETH_SCHEMA);
+    if (_z_string_equals(proto, &cmp_str)) {
+        _z_raweth_config_t c;
+        _Z_RETURN_IF_ERR(_z_raweth_config_typed_from_strn(&c, p_start, cfg_size));
+        *cfg = _z_endpoint_config_from_raweth(&c);
+        return _Z_RES_OK;
+    }
+#endif
+    return _Z_RES_OK;
+}
+
+z_result_t _z_endpoint_config_from_string(_z_endpoint_config_t *cfg, const _z_string_t *str, _z_string_t *proto) {
     char *p_start = (char *)memchr(_z_string_data(str), ENDPOINT_CONFIG_SEPARATOR, _z_string_len(str));
     if (p_start != NULL) {
         p_start = _z_ptr_char_offset(p_start, 1);
         size_t cfg_size = _z_string_len(str) - _z_ptr_char_diff(p_start, _z_string_data(str));
-
-        // Call the right configuration parser depending on the protocol
-        _z_string_t cmp_str = _z_string_null();
-#if Z_FEATURE_LINK_TCP == 1
-        cmp_str = _z_string_alias_str(TCP_SCHEMA);
-        if (_z_string_equals(proto, &cmp_str)) {
-            return _z_tcp_config_from_strn(strint, p_start, cfg_size);
-        }
-#endif
-#if Z_FEATURE_LINK_UDP_UNICAST == 1 || Z_FEATURE_LINK_UDP_MULTICAST == 1
-        cmp_str = _z_string_alias_str(UDP_SCHEMA);
-        if (_z_string_equals(proto, &cmp_str)) {
-            return _z_udp_config_from_strn(strint, p_start, cfg_size);
-        }
-#endif
-#if Z_FEATURE_LINK_BLUETOOTH == 1
-        cmp_str = _z_string_alias_str(BT_SCHEMA);
-        if (_z_string_equals(proto, &cmp_str)) {
-            return _z_bt_config_from_strn(strint, p_start, cfg_size);
-        }
-#endif
-#if Z_FEATURE_LINK_SERIAL == 1
-        cmp_str = _z_string_alias_str(SERIAL_SCHEMA);
-        if (_z_string_equals(proto, &cmp_str)) {
-            return _z_serial_config_from_strn(strint, p_start, cfg_size);
-        }
-#endif
-#if Z_FEATURE_LINK_WS == 1
-        cmp_str = _z_string_alias_str(WS_SCHEMA);
-        if (_z_string_equals(proto, &cmp_str)) {
-            return _z_ws_config_from_strn(strint, p_start, cfg_size);
-        }
-#endif
-#if Z_FEATURE_LINK_TLS == 1
-        cmp_str = _z_string_alias_str(TLS_SCHEMA);
-        if (_z_string_equals(proto, &cmp_str)) {
-            return _z_tls_config_from_strn(strint, p_start, cfg_size);
-        }
-#endif
-        cmp_str = _z_string_alias_str(RAWETH_SCHEMA);
-        if (_z_string_equals(proto, &cmp_str)) {
-            return _z_raweth_config_from_strn(strint, p_start, cfg_size);
-        }
+        return _z_endpoint_typed_config_from_strn(cfg, proto, p_start, cfg_size);
     }
     return _Z_RES_OK;
 }
 
-size_t _z_endpoint_config_strlen(const _z_str_intmap_t *s, _z_string_t *proto) {
-    // Call the right configuration parser depending on the protocol
-    _z_string_t cmp_str = _z_string_null();
+// Serialize the typed config back to its `key=value;...` string form (heap).
+// Returns NULL when there is no config (NONE) or on error.
+char *_z_endpoint_config_to_string(const _z_endpoint_config_t *cfg) {
+    switch (_z_endpoint_config_tag(cfg)) {
 #if Z_FEATURE_LINK_TCP == 1
-    cmp_str = _z_string_alias_str(TCP_SCHEMA);
-    if (_z_string_equals(proto, &cmp_str)) {
-        return _z_tcp_config_strlen(s);
-    }
+        case _z_endpoint_config_tag_tcp:
+            return _z_tcp_config_typed_to_str(_z_endpoint_config_get_tcp((_z_endpoint_config_t *)cfg));
 #endif
 #if Z_FEATURE_LINK_UDP_UNICAST == 1 || Z_FEATURE_LINK_UDP_MULTICAST == 1
-    cmp_str = _z_string_alias_str(UDP_SCHEMA);
-    if (_z_string_equals(proto, &cmp_str)) {
-        return _z_udp_config_strlen(s);
-    }
+        case _z_endpoint_config_tag_udp:
+            return _z_udp_config_typed_to_str(_z_endpoint_config_get_udp((_z_endpoint_config_t *)cfg));
 #endif
 #if Z_FEATURE_LINK_BLUETOOTH == 1
-    cmp_str = _z_string_alias_str(BT_SCHEMA);
-    if (_z_string_equals(proto, &cmp_str)) {
-        return _z_bt_config_strlen(s);
-    }
+        case _z_endpoint_config_tag_bt:
+            return _z_bt_config_typed_to_str(_z_endpoint_config_get_bt((_z_endpoint_config_t *)cfg));
 #endif
 #if Z_FEATURE_LINK_SERIAL == 1
-    cmp_str = _z_string_alias_str(SERIAL_SCHEMA);
-    if (_z_string_equals(proto, &cmp_str)) {
-        return _z_serial_config_strlen(s);
-    }
+        case _z_endpoint_config_tag_serial:
+            return _z_serial_config_typed_to_str(_z_endpoint_config_get_serial((_z_endpoint_config_t *)cfg));
 #endif
 #if Z_FEATURE_LINK_WS == 1
-    cmp_str = _z_string_alias_str(WS_SCHEMA);
-    if (_z_string_equals(proto, &cmp_str)) {
-        return _z_ws_config_strlen(s);
-    }
+        case _z_endpoint_config_tag_ws:
+            return _z_ws_config_typed_to_str(_z_endpoint_config_get_ws((_z_endpoint_config_t *)cfg));
 #endif
 #if Z_FEATURE_LINK_TLS == 1
-    cmp_str = _z_string_alias_str(TLS_SCHEMA);
-    if (_z_string_equals(proto, &cmp_str)) {
-        return _z_tls_config_strlen(s);
-    }
+        case _z_endpoint_config_tag_tls:
+            return _z_tls_config_typed_to_str(_z_endpoint_config_get_tls((_z_endpoint_config_t *)cfg));
 #endif
-    cmp_str = _z_string_alias_str(RAWETH_SCHEMA);
-    if (_z_string_equals(proto, &cmp_str)) {
-        return _z_raweth_config_strlen(s);
-    }
-    return 0;
-}
-
-char *_z_endpoint_config_to_string(const _z_str_intmap_t *s, const _z_string_t *proto) {
-    // Call the right configuration parser depending on the protocol
-    _z_string_t cmp_str = _z_string_null();
-
-#if Z_FEATURE_LINK_TCP == 1
-    cmp_str = _z_string_alias_str(TCP_SCHEMA);
-    if (_z_string_equals(proto, &cmp_str)) {
-        return _z_tcp_config_to_str(s);
-    }
+#if Z_FEATURE_RAWETH_TRANSPORT == 1
+        case _z_endpoint_config_tag_raweth:
+            return _z_raweth_config_typed_to_str(_z_endpoint_config_get_raweth((_z_endpoint_config_t *)cfg));
 #endif
-#if Z_FEATURE_LINK_UDP_UNICAST == 1 || Z_FEATURE_LINK_UDP_MULTICAST == 1
-    cmp_str = _z_string_alias_str(UDP_SCHEMA);
-    if (_z_string_equals(proto, &cmp_str)) {
-        return _z_udp_config_to_str(s);
+        default:
+            return NULL;
     }
-#endif
-#if Z_FEATURE_LINK_BLUETOOTH == 1
-    cmp_str = _z_string_alias_str(BT_SCHEMA);
-    if (_z_string_equals(proto, &cmp_str)) {
-        return _z_bt_config_to_str(s);
-    }
-#endif
-#if Z_FEATURE_LINK_SERIAL == 1
-    cmp_str = _z_string_alias_str(SERIAL_SCHEMA);
-    if (_z_string_equals(proto, &cmp_str)) {
-        return _z_serial_config_to_str(s);
-    }
-#endif
-#if Z_FEATURE_LINK_WS == 1
-    cmp_str = _z_string_alias_str(WS_SCHEMA);
-    if (_z_string_equals(proto, &cmp_str)) {
-        return _z_ws_config_to_str(s);
-    }
-#endif
-#if Z_FEATURE_LINK_TLS == 1
-    cmp_str = _z_string_alias_str(TLS_SCHEMA);
-    if (_z_string_equals(proto, &cmp_str)) {
-        return _z_tls_config_to_str(s);
-    }
-#endif
-    cmp_str = _z_string_alias_str(RAWETH_SCHEMA);
-    if (_z_string_equals(proto, &cmp_str)) {
-        return _z_raweth_config_to_str(s);
-    }
-    return NULL;
 }
 
 z_result_t _z_endpoint_from_string(_z_endpoint_t *ep, const _z_string_t *str) {
@@ -546,7 +464,7 @@ _z_string_t _z_endpoint_to_string(const _z_endpoint_t *endpoint) {
     }
     size_t curr_len = _z_string_len(&locator);
     // Retrieve config
-    char *config = _z_endpoint_config_to_string(&endpoint->_config, &endpoint->_locator._protocol);
+    char *config = _z_endpoint_config_to_string(&endpoint->_config);
     size_t config_len = 0;
     if (config != NULL) {
         config_len = strlen(config);

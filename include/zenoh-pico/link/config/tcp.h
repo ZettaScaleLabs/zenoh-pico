@@ -15,33 +15,44 @@
 #ifndef ZENOH_PICO_LINK_CONFIG_TCP_H
 #define ZENOH_PICO_LINK_CONFIG_TCP_H
 
-#include "zenoh-pico/collections/intmap.h"
+#include <stdint.h>
+
 #include "zenoh-pico/collections/string.h"
 #include "zenoh-pico/config.h"
+#include "zenoh-pico/utils/result.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+// ── Typed config struct ──────────────────────────────────────────────────────
+//
+// This alternative of the `_z_endpoint_config_t` variant is included into the
+// variant (in `endpoint_config.h`) only when `Z_FEATURE_LINK_TCP` is enabled.
+
+// tcp#tout=<ms>
+typedef struct {
+    uint32_t _tout;
+} _z_tcp_config_t;
+
+// tcp is POD: clear is a no-op.
+static inline void _z_tcp_config_clear(_z_tcp_config_t *c) { (void)c; }
+
 #if Z_FEATURE_LINK_TCP == 1
 
-#define TCP_CONFIG_ARGC 1
-
-#define TCP_CONFIG_TOUT_KEY 0x01
 #define TCP_CONFIG_TOUT_STR "tout"
 
-#define TCP_CONFIG_MAPPING_BUILD               \
-    _z_str_intmapping_t args[TCP_CONFIG_ARGC]; \
-    args[0]._key = TCP_CONFIG_TOUT_KEY;        \
-    args[0]._str = (char *)TCP_CONFIG_TOUT_STR;
+// ── Typed config (de)serialization ───────────────────────────────────────────
+//
+// These operate on the strongly-typed `_z_tcp_config_t` and have no dependency
+// on the generic string intmap. The wire format is unchanged: a `;`-separated
+// list of `key=value` pairs (here just the optional `tout=<ms>`).
 
-size_t _z_tcp_config_strlen(const _z_str_intmap_t *s);
-
-void _z_tcp_config_onto_str(char *dst, size_t dst_len, const _z_str_intmap_t *s);
-char *_z_tcp_config_to_str(const _z_str_intmap_t *s);
-
-z_result_t _z_tcp_config_from_str(_z_str_intmap_t *strint, const char *s);
-z_result_t _z_tcp_config_from_strn(_z_str_intmap_t *strint, const char *s, size_t n);
+// Parse the config portion of a `tcp#...` endpoint into a typed struct.
+z_result_t _z_tcp_config_typed_from_strn(_z_tcp_config_t *cfg, const char *s, size_t n);
+// Serialize a typed TCP config into its `key=value;...` string form (heap).
+// Returns an empty heap string when no option is set; NULL on allocation error.
+char *_z_tcp_config_typed_to_str(const _z_tcp_config_t *cfg);
 #endif
 
 #ifdef __cplusplus

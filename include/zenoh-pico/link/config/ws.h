@@ -15,32 +15,38 @@
 #ifndef ZENOH_PICO_LINK_CONFIG_WS_H
 #define ZENOH_PICO_LINK_CONFIG_WS_H
 
-#include "zenoh-pico/collections/intmap.h"
+#include <stdint.h>
+
 #include "zenoh-pico/collections/string.h"
 #include "zenoh-pico/config.h"
+#include "zenoh-pico/utils/result.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+// ── Typed config struct ──────────────────────────────────────────────────────
+//
+// This alternative of the `_z_endpoint_config_t` variant is included into the
+// variant (in `endpoint_config.h`) only when `Z_FEATURE_LINK_WS` is enabled.
+
+// ws#tout=<ms>
+typedef struct {
+    uint32_t _tout;
+} _z_ws_config_t;
+
+// ws is POD: clear is a no-op.
+static inline void _z_ws_config_clear(_z_ws_config_t *c) { (void)c; }
+
 #if Z_FEATURE_LINK_WS == 1
 
-#define WS_CONFIG_TOUT_KEY 0x01
 #define WS_CONFIG_TOUT_STR "tout"
 
-#define WS_CONFIG_MAPPING_BUILD        \
-    uint8_t argc = 1;                  \
-    _z_str_intmapping_t args[argc];    \
-    args[0]._key = WS_CONFIG_TOUT_KEY; \
-    args[0]._str = WS_CONFIG_TOUT_STR;
-
-size_t _z_ws_config_strlen(const _z_str_intmap_t *s);
-
-void _z_ws_config_onto_str(char *dst, size_t dst_len, const _z_str_intmap_t *s);
-char *_z_ws_config_to_str(const _z_str_intmap_t *s);
-
-z_result_t _z_ws_config_from_str(_z_str_intmap_t *strint, const char *s);
-z_result_t _z_ws_config_from_strn(_z_str_intmap_t *strint, const char *s, size_t n);
+// ── Typed config (de)serialization (intmap-free) ─────────────────────────────
+// Parse the config portion of a `ws#...` endpoint into a typed struct.
+z_result_t _z_ws_config_typed_from_strn(_z_ws_config_t *cfg, const char *s, size_t n);
+// Serialize a typed WS config into its `key=value;...` string form (heap).
+char *_z_ws_config_typed_to_str(const _z_ws_config_t *cfg);
 #endif
 
 #ifdef __cplusplus

@@ -18,6 +18,7 @@
 #include <string.h>
 
 #include "zenoh-pico/config.h"
+#include "zenoh-pico/link/config/parser.h"
 #include "zenoh-pico/link/config/raweth.h"
 #include "zenoh-pico/link/manager.h"
 #include "zenoh-pico/link/transport/raweth.h"
@@ -31,33 +32,13 @@
 #define RAWETH_CFG_TUPLE_SEPARATOR '#'
 #define RAWETH_CFG_LIST_SEPARATOR ","
 
-#define RAWETH_CONFIG_ARGC 4
-
-#define RAWETH_CONFIG_IFACE_KEY 0x01
 #define RAWETH_CONFIG_IFACE_STR "iface"
-
-#define RAWETH_CONFIG_ETHTYPE_KEY 0x02
 #define RAWETH_CONFIG_ETHTYPE_STR "ethtype"
-
-#define RAWETH_CONFIG_MAPPING_KEY 0x03
 #define RAWETH_CONFIG_MAPPING_STR "mapping"
-
-#define RAWETH_CONFIG_WHITELIST_KEY 0x04
 #define RAWETH_CONFIG_WHITELIST_STR "whitelist"
 
 // Ethtype must be at least 0x600 in network order
 #define RAWETH_ETHTYPE_MIN_VALUE 0x600U
-
-#define RAWETH_CONFIG_MAPPING_BUILD               \
-    _z_str_intmapping_t args[RAWETH_CONFIG_ARGC]; \
-    args[0]._key = RAWETH_CONFIG_IFACE_KEY;       \
-    args[0]._str = RAWETH_CONFIG_IFACE_STR;       \
-    args[1]._key = RAWETH_CONFIG_ETHTYPE_KEY;     \
-    args[1]._str = RAWETH_CONFIG_ETHTYPE_STR;     \
-    args[2]._key = RAWETH_CONFIG_MAPPING_KEY;     \
-    args[2]._str = RAWETH_CONFIG_MAPPING_STR;     \
-    args[3]._key = RAWETH_CONFIG_WHITELIST_KEY;   \
-    args[3]._str = RAWETH_CONFIG_WHITELIST_STR;
 
 const uint16_t _ZP_RAWETH_DEFAULT_ETHTYPE = 0x72e0;
 const char *_ZP_RAWETH_DEFAULT_INTERFACE = "lo";
@@ -65,14 +46,11 @@ const uint8_t _ZP_RAWETH_DEFAULT_SMAC[_ZP_MAC_ADDR_LENGTH] = {0x30, 0x03, 0xc8, 
 const _zp_raweth_mapping_entry_t _ZP_RAWETH_DEFAULT_MAPPING = {
     ._keyexpr = {0}, ._vlan = 0x0000, ._dmac = {0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff}, ._has_vlan = false};
 
-static bool _z_valid_iface_raweth(_z_str_intmap_t *config);
-static const char *_z_get_iface_raweth(_z_str_intmap_t *config);
-static bool _z_valid_ethtype_raweth(_z_str_intmap_t *config);
-static long _z_get_ethtype_raweth(_z_str_intmap_t *config);
-static size_t _z_valid_mapping_raweth(_z_str_intmap_t *config);
-static z_result_t _z_get_mapping_raweth(_z_str_intmap_t *config, _zp_raweth_mapping_array_t *array, size_t size);
-static size_t _z_valid_whitelist_raweth(_z_str_intmap_t *config);
-static z_result_t _z_get_whitelist_raweth(_z_str_intmap_t *config, _zp_raweth_whitelist_array_t *array, size_t size);
+static size_t _z_valid_mapping_raweth(const _z_string_t *cfg_mapping);
+static z_result_t _z_get_mapping_raweth(const _z_string_t *cfg_mapping, _zp_raweth_mapping_array_t *array, size_t size);
+static size_t _z_valid_whitelist_raweth(const _z_string_t *cfg_whitelist);
+static z_result_t _z_get_whitelist_raweth(const _z_string_t *cfg_whitelist, _zp_raweth_whitelist_array_t *array,
+                                          size_t size);
 static z_result_t _z_get_mapping_entry(char *entry, _zp_raweth_mapping_entry_t *storage);
 static bool _z_valid_mapping_entry(char *entry);
 static bool _z_valid_address_raweth_inner(const _z_string_t *address);
@@ -90,36 +68,12 @@ static size_t _z_f_link_read_exact_raweth(const _z_link_t *self, uint8_t *ptr, s
                                           _z_sys_net_socket_t *socket);
 static uint16_t _z_get_link_mtu_raweth(void);
 
-static bool _z_valid_iface_raweth(_z_str_intmap_t *config) {
-    const char *iface = _z_str_intmap_get(config, RAWETH_CONFIG_IFACE_KEY);
-    return (iface != NULL);
-}
-
-static const char *_z_get_iface_raweth(_z_str_intmap_t *config) {
-    return _z_str_intmap_get(config, RAWETH_CONFIG_IFACE_KEY);
-}
-
-static bool _z_valid_ethtype_raweth(_z_str_intmap_t *config) {
-    const char *s_ethtype = _z_str_intmap_get(config, RAWETH_CONFIG_ETHTYPE_KEY);
-    if (s_ethtype == NULL) {
-        return false;
-    }
-    long ethtype = strtol(s_ethtype, NULL, 16);
-    return (_z_raweth_htons((uint16_t)ethtype) > RAWETH_ETHTYPE_MIN_VALUE);
-}
-
-static long _z_get_ethtype_raweth(_z_str_intmap_t *config) {
-    const char *s_ethtype = _z_str_intmap_get(config, RAWETH_CONFIG_ETHTYPE_KEY);
-    return strtol(s_ethtype, NULL, 16);
-}
-
-static size_t _z_valid_mapping_raweth(_z_str_intmap_t *config) {
+static size_t _z_valid_mapping_raweth(const _z_string_t *cfg_mapping) {
     // Retrieve list
-    const char *cfg_str = _z_str_intmap_get(config, RAWETH_CONFIG_MAPPING_KEY);
-    if (cfg_str == NULL) {
+    if (!_z_string_check(cfg_mapping)) {
         return 0;
     }
-    char *s_mapping = _z_str_clone(cfg_str);
+    char *s_mapping = _z_str_clone(_z_string_data(cfg_mapping));
     if (s_mapping == NULL) {
         return 0;
     }
@@ -141,14 +95,14 @@ static size_t _z_valid_mapping_raweth(_z_str_intmap_t *config) {
     return size;
 }
 
-static z_result_t _z_get_mapping_raweth(_z_str_intmap_t *config, _zp_raweth_mapping_array_t *array, size_t size) {
+static z_result_t _z_get_mapping_raweth(const _z_string_t *cfg_mapping, _zp_raweth_mapping_array_t *array,
+                                        size_t size) {
     // Retrieve data
-    const char *cfg_str = _z_str_intmap_get(config, RAWETH_CONFIG_MAPPING_KEY);
-    if (cfg_str == NULL) {
+    if (!_z_string_check(cfg_mapping)) {
         _Z_ERROR_RETURN(_Z_ERR_GENERIC);
     }
     // Copy data
-    char *s_mapping = _z_str_clone(cfg_str);
+    char *s_mapping = _z_str_clone(_z_string_data(cfg_mapping));
     if (s_mapping == NULL) {
         _Z_ERROR_RETURN(_Z_ERR_SYSTEM_OUT_OF_MEMORY);
     }
@@ -174,14 +128,13 @@ static z_result_t _z_get_mapping_raweth(_z_str_intmap_t *config, _zp_raweth_mapp
     return _Z_RES_OK;
 }
 
-static size_t _z_valid_whitelist_raweth(_z_str_intmap_t *config) {
+static size_t _z_valid_whitelist_raweth(const _z_string_t *cfg_whitelist) {
     // Retrieve data
-    const char *cfg_str = _z_str_intmap_get(config, RAWETH_CONFIG_WHITELIST_KEY);
-    if (cfg_str == NULL) {
+    if (!_z_string_check(cfg_whitelist)) {
         return 0;
     }
     // Copy data
-    char *s_whitelist = _z_str_clone(cfg_str);
+    char *s_whitelist = _z_str_clone(_z_string_data(cfg_whitelist));
     if (s_whitelist == NULL) {
         return 0;
     }
@@ -205,14 +158,14 @@ static size_t _z_valid_whitelist_raweth(_z_str_intmap_t *config) {
     return size;
 }
 
-static z_result_t _z_get_whitelist_raweth(_z_str_intmap_t *config, _zp_raweth_whitelist_array_t *array, size_t size) {
+static z_result_t _z_get_whitelist_raweth(const _z_string_t *cfg_whitelist, _zp_raweth_whitelist_array_t *array,
+                                          size_t size) {
     // Retrieve data
-    const char *cfg_str = _z_str_intmap_get(config, RAWETH_CONFIG_WHITELIST_KEY);
-    if (cfg_str == NULL) {
+    if (!_z_string_check(cfg_whitelist)) {
         _Z_ERROR_RETURN(_Z_ERR_GENERIC);
     }
     // Copy data
-    char *s_whitelist = _z_str_clone(cfg_str);
+    char *s_whitelist = _z_str_clone(_z_string_data(cfg_whitelist));
     if (s_whitelist == NULL) {
         _Z_ERROR_RETURN(_Z_ERR_SYSTEM_OUT_OF_MEMORY);
     }
@@ -356,6 +309,16 @@ static uint8_t *_z_parse_address_raweth(const char *address) {
 }
 
 static z_result_t _z_f_link_open_raweth(_z_link_t *self) {
+    // Retrieve typed config (may be absent)
+    const _z_raweth_config_t *cfg = NULL;
+    if (_z_endpoint_config_is_raweth(&self->_endpoint._config)) {
+        cfg = _z_endpoint_config_get_raweth((_z_endpoint_config_t *)&self->_endpoint._config);
+    }
+    _z_string_t empty_str = _z_string_null();
+    const _z_string_t *cfg_iface = (cfg != NULL) ? &cfg->_interface : &empty_str;
+    const _z_string_t *cfg_mapping = (cfg != NULL) ? &cfg->_mapping : &empty_str;
+    const _z_string_t *cfg_whitelist = (cfg != NULL) ? &cfg->_whitelist : &empty_str;
+
     // Init arrays
     self->_socket._raweth._mapping = _zp_raweth_mapping_array_empty();
     self->_socket._raweth._whitelist = _zp_raweth_whitelist_array_empty();
@@ -371,23 +334,23 @@ static z_result_t _z_f_link_open_raweth(_z_link_t *self) {
         memcpy(self->_socket._raweth._smac, _ZP_RAWETH_DEFAULT_SMAC, _ZP_MAC_ADDR_LENGTH);
     }
     // Init socket interface
-    if (_z_valid_iface_raweth(&self->_endpoint._config)) {
-        self->_socket._raweth._interface = _z_get_iface_raweth(&self->_endpoint._config);
+    if (_z_string_check(cfg_iface)) {
+        self->_socket._raweth._interface = _z_string_data(cfg_iface);
     } else {
         _Z_DEBUG("Invalid locator interface, using default value %s", _ZP_RAWETH_DEFAULT_INTERFACE);
         self->_socket._raweth._interface = _ZP_RAWETH_DEFAULT_INTERFACE;
     }
     // Init socket ethtype
-    if (_z_valid_ethtype_raweth(&self->_endpoint._config)) {
-        self->_socket._raweth._ethtype = (uint16_t)_z_get_ethtype_raweth(&self->_endpoint._config);
+    if ((cfg != NULL) && (cfg->_ethtype != 0) && (_z_raweth_htons(cfg->_ethtype) > RAWETH_ETHTYPE_MIN_VALUE)) {
+        self->_socket._raweth._ethtype = cfg->_ethtype;
     } else {
         _Z_DEBUG("Invalid locator ethtype, using default value 0x%04x", _ZP_RAWETH_DEFAULT_ETHTYPE);
         self->_socket._raweth._ethtype = _ZP_RAWETH_DEFAULT_ETHTYPE;
     }
     // Init socket mapping
-    size_t size = _z_valid_mapping_raweth(&self->_endpoint._config);
+    size_t size = _z_valid_mapping_raweth(cfg_mapping);
     if (size != (size_t)0) {
-        _Z_RETURN_IF_ERR(_z_get_mapping_raweth(&self->_endpoint._config, &self->_socket._raweth._mapping, size));
+        _Z_RETURN_IF_ERR(_z_get_mapping_raweth(cfg_mapping, &self->_socket._raweth._mapping, size));
     } else {
         _Z_DEBUG("Invalid locator mapping, using default value.");
         self->_socket._raweth._mapping = _zp_raweth_mapping_array_make(1);
@@ -398,9 +361,9 @@ static z_result_t _z_f_link_open_raweth(_z_link_t *self) {
         *entry = _ZP_RAWETH_DEFAULT_MAPPING;
     }
     // Init socket whitelist
-    size = _z_valid_whitelist_raweth(&self->_endpoint._config);
+    size = _z_valid_whitelist_raweth(cfg_whitelist);
     if (size != (size_t)0) {
-        _Z_RETURN_IF_ERR(_z_get_whitelist_raweth(&self->_endpoint._config, &self->_socket._raweth._whitelist, size));
+        _Z_RETURN_IF_ERR(_z_get_whitelist_raweth(cfg_whitelist, &self->_socket._raweth._whitelist, size));
     } else {
         _Z_DEBUG("Invalid locator whitelist, filtering deactivated.");
     }
@@ -496,23 +459,90 @@ z_result_t _z_new_link_raweth(_z_link_t *zl, _z_endpoint_t endpoint) {
     return ret;
 }
 
-size_t _z_raweth_config_strlen(const _z_str_intmap_t *s) {
-    RAWETH_CONFIG_MAPPING_BUILD
-    return _z_str_intmap_strlen(s, RAWETH_CONFIG_ARGC, args);
-}
-char *_z_raweth_config_to_str(const _z_str_intmap_t *s) {
-    RAWETH_CONFIG_MAPPING_BUILD
-    return _z_str_intmap_to_str(s, RAWETH_CONFIG_ARGC, args);
+// ── Typed config (de)serialization (intmap-free) ─────────────────────────────
+//
+// Only `iface` and `ethtype` are modeled by the typed struct. `mapping` and
+// `whitelist` remain handled via the intmap path inside the transport.
+
+// Parse a hexadecimal value (no "0x" prefix, matching the intmap path which
+// calls strtol(..., 16)). Returns false on empty/invalid input.
+static bool _z_raweth_hex_as_u16(const char *v, size_t n, uint16_t *out) {
+    if (n == 0) {
+        return false;
+    }
+    uint32_t acc = 0;
+    for (size_t i = 0; i < n; i++) {
+        char c = v[i];
+        uint32_t digit;
+        if (c >= '0' && c <= '9') {
+            digit = (uint32_t)(c - '0');
+        } else if (c >= 'a' && c <= 'f') {
+            digit = (uint32_t)(c - 'a') + 10u;
+        } else if (c >= 'A' && c <= 'F') {
+            digit = (uint32_t)(c - 'A') + 10u;
+        } else {
+            return false;
+        }
+        acc = (acc << 4) | digit;
+        if (acc > 0xFFFFu) {
+            return false;
+        }
+    }
+    *out = (uint16_t)acc;
+    return true;
 }
 
-z_result_t _z_raweth_config_from_strn(_z_str_intmap_t *strint, const char *s, size_t n) {
-    RAWETH_CONFIG_MAPPING_BUILD
-    return _z_str_intmap_from_strn(strint, s, RAWETH_CONFIG_ARGC, args, n);
+z_result_t _z_raweth_config_typed_from_strn(_z_raweth_config_t *cfg, const char *s, size_t n) {
+    memset(cfg, 0, sizeof(*cfg));
+
+    _z_config_iter_t it = _z_config_iter_make(s, n);
+    _z_config_kv_t kv;
+    while (_z_config_iter_next(&it, &kv)) {
+        if (_z_config_kv_key_eq(&kv, RAWETH_CONFIG_IFACE_STR)) {
+            _z_string_clear(&cfg->_interface);
+            cfg->_interface = _z_string_copy_from_substr(kv._value, kv._value_len);
+        } else if (_z_config_kv_key_eq(&kv, RAWETH_CONFIG_ETHTYPE_STR)) {
+            uint16_t ethtype = 0;
+            if (!_z_raweth_hex_as_u16(kv._value, kv._value_len, &ethtype)) {
+                _z_raweth_config_clear(cfg);
+                return _Z_ERR_CONFIG_LOCATOR_INVALID;
+            }
+            cfg->_ethtype = ethtype;
+        } else if (_z_config_kv_key_eq(&kv, RAWETH_CONFIG_MAPPING_STR)) {
+            _z_string_clear(&cfg->_mapping);
+            cfg->_mapping = _z_string_copy_from_substr(kv._value, kv._value_len);
+        } else if (_z_config_kv_key_eq(&kv, RAWETH_CONFIG_WHITELIST_STR)) {
+            _z_string_clear(&cfg->_whitelist);
+            cfg->_whitelist = _z_string_copy_from_substr(kv._value, kv._value_len);
+        }
+        // unknown keys are ignored.
+    }
+    return _Z_RES_OK;
 }
 
-z_result_t _z_raweth_config_from_str(_z_str_intmap_t *strint, const char *s) {
-    // Flawfinder: ignore [CWE-126] - public from_str() expects a conventional '\0'-terminated C string.
-    return _z_raweth_config_from_strn(strint, s, strlen(s));
+char *_z_raweth_config_typed_to_str(const _z_raweth_config_t *cfg) {
+    _z_config_builder_t b;
+    _z_config_builder_init(&b);
+    if (_z_string_check(&cfg->_interface)) {
+        _z_config_builder_add_substr(&b, RAWETH_CONFIG_IFACE_STR, _z_string_data(&cfg->_interface),
+                                     _z_string_len(&cfg->_interface));
+    }
+    if (cfg->_ethtype != 0) {
+        char tmp[5];  // up to 4 hex digits
+        int written = snprintf(tmp, sizeof(tmp), "%x", cfg->_ethtype);
+        if (written > 0) {
+            _z_config_builder_add_substr(&b, RAWETH_CONFIG_ETHTYPE_STR, tmp, (size_t)written);
+        }
+    }
+    if (_z_string_check(&cfg->_mapping)) {
+        _z_config_builder_add_substr(&b, RAWETH_CONFIG_MAPPING_STR, _z_string_data(&cfg->_mapping),
+                                     _z_string_len(&cfg->_mapping));
+    }
+    if (_z_string_check(&cfg->_whitelist)) {
+        _z_config_builder_add_substr(&b, RAWETH_CONFIG_WHITELIST_STR, _z_string_data(&cfg->_whitelist),
+                                     _z_string_len(&cfg->_whitelist));
+    }
+    return _z_config_builder_take(&b);
 }
 
 #else
@@ -527,26 +557,15 @@ z_result_t _z_new_link_raweth(_z_link_t *zl, _z_endpoint_t endpoint) {
     _Z_ERROR_RETURN(_Z_ERR_TRANSPORT_NOT_AVAILABLE);
 }
 
-size_t _z_raweth_config_strlen(const _z_str_intmap_t *s) {
-    _ZP_UNUSED(s);
-    return 0;
-}
-
-char *_z_raweth_config_to_str(const _z_str_intmap_t *s) {
-    _ZP_UNUSED(s);
-    return NULL;
-}
-
-z_result_t _z_raweth_config_from_strn(_z_str_intmap_t *strint, const char *s, size_t n) {
-    _ZP_UNUSED(strint);
+z_result_t _z_raweth_config_typed_from_strn(_z_raweth_config_t *cfg, const char *s, size_t n) {
+    _ZP_UNUSED(cfg);
     _ZP_UNUSED(s);
     _ZP_UNUSED(n);
     _Z_ERROR_RETURN(_Z_ERR_TRANSPORT_NOT_AVAILABLE);
 }
 
-z_result_t _z_raweth_config_from_str(_z_str_intmap_t *strint, const char *s) {
-    _ZP_UNUSED(strint);
-    _ZP_UNUSED(s);
-    _Z_ERROR_RETURN(_Z_ERR_TRANSPORT_NOT_AVAILABLE);
+char *_z_raweth_config_typed_to_str(const _z_raweth_config_t *cfg) {
+    _ZP_UNUSED(cfg);
+    return NULL;
 }
 #endif

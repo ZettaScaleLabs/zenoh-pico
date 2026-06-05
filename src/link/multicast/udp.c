@@ -37,7 +37,11 @@ z_result_t _z_endpoint_udp_multicast_valid(_z_endpoint_t *endpoint) {
         return ret;
     }
 
-    const char *iface = _z_str_intmap_get(&endpoint->_config, UDP_CONFIG_IFACE_KEY);
+    const char *iface = NULL;
+    if (_z_endpoint_config_is_udp(&endpoint->_config)) {
+        const _z_udp_config_t *cfg = _z_endpoint_config_get_udp(&endpoint->_config);
+        iface = _z_string_data(&cfg->_iface);
+    }
     if (iface == NULL) {
         _Z_ERROR_LOG(_Z_ERR_CONFIG_LOCATOR_INVALID);
         return _Z_ERR_CONFIG_LOCATOR_INVALID;
@@ -48,12 +52,14 @@ z_result_t _z_endpoint_udp_multicast_valid(_z_endpoint_t *endpoint) {
 
 z_result_t _z_f_link_open_udp_multicast(_z_link_t *self) {
     uint32_t tout = Z_CONFIG_SOCKET_TIMEOUT;
-    char *tout_as_str = _z_str_intmap_get(&self->_endpoint._config, UDP_CONFIG_TOUT_KEY);
-    if (tout_as_str != NULL) {
-        tout = (uint32_t)strtoul(tout_as_str, NULL, 10);
+    const char *iface = NULL;
+    if (_z_endpoint_config_is_udp(&self->_endpoint._config)) {
+        const _z_udp_config_t *cfg = _z_endpoint_config_get_udp(&self->_endpoint._config);
+        if (cfg->_tout != 0) {
+            tout = cfg->_tout;
+        }
+        iface = _z_string_data(&cfg->_iface);
     }
-
-    const char *iface = _z_str_intmap_get(&self->_endpoint._config, UDP_CONFIG_IFACE_KEY);
     return _z_udp_multicast_open(&self->_socket._udp._sock, self->_socket._udp._rep, &self->_socket._udp._lep, tout,
                                  iface);
 }
@@ -61,8 +67,13 @@ z_result_t _z_f_link_open_udp_multicast(_z_link_t *self) {
 z_result_t _z_f_link_listen_udp_multicast(_z_link_t *self) {
     z_result_t ret = _Z_RES_OK;
 
-    const char *iface = _z_str_intmap_get(&self->_endpoint._config, UDP_CONFIG_IFACE_KEY);
-    const char *join = _z_str_intmap_get(&self->_endpoint._config, UDP_CONFIG_JOIN_KEY);
+    const char *iface = NULL;
+    const char *join = NULL;
+    if (_z_endpoint_config_is_udp(&self->_endpoint._config)) {
+        const _z_udp_config_t *cfg = _z_endpoint_config_get_udp(&self->_endpoint._config);
+        iface = _z_string_data(&cfg->_iface);
+        join = _z_string_data(&cfg->_join);
+    }
     ret = _z_udp_multicast_listen(&self->_socket._udp._sock, self->_socket._udp._rep, Z_CONFIG_SOCKET_TIMEOUT, iface,
                                   join);
     ret |= _z_udp_multicast_open(&self->_socket._udp._msock, self->_socket._udp._rep, &self->_socket._udp._lep,

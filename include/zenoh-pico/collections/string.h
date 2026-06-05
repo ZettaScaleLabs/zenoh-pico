@@ -44,24 +44,6 @@ _Z_VEC_DEFINE(_z_str, char)
 _Z_LIST_DEFINE(_z_str, char)
 _Z_INT_MAP_DEFINE(_z_str, char)
 
-#define INT_STR_MAP_KEYVALUE_SEPARATOR '='
-#define INT_STR_MAP_LIST_SEPARATOR ';'
-
-typedef struct {
-    char *_str;
-    uint8_t _key;
-} _z_str_intmapping_t;
-
-size_t _z_str_intmap_strlen(const _z_str_intmap_t *s, uint8_t argc, _z_str_intmapping_t argv[]);
-
-void _z_str_intmap_onto_str(char *dst, size_t dst_len, const _z_str_intmap_t *s, uint8_t argc,
-                            _z_str_intmapping_t argv[]);
-char *_z_str_intmap_to_str(const _z_str_intmap_t *s, uint8_t argc, _z_str_intmapping_t argv[]);
-
-z_result_t _z_str_intmap_from_str(_z_str_intmap_t *strint, const char *s, uint8_t argc, _z_str_intmapping_t argv[]);
-z_result_t _z_str_intmap_from_strn(_z_str_intmap_t *strint, const char *s, uint8_t argc, _z_str_intmapping_t argv[],
-                                   size_t n);
-
 /*-------- string --------*/
 /**
  * A string with no terminator.

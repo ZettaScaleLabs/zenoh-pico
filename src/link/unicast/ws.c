@@ -42,9 +42,11 @@ z_result_t _z_endpoint_ws_valid(_z_endpoint_t *endpoint) {
 
 z_result_t _z_f_link_open_ws(_z_link_t *zl) {
     uint32_t tout = Z_CONFIG_SOCKET_TIMEOUT;
-    char *tout_as_str = _z_str_intmap_get(&zl->_endpoint._config, WS_CONFIG_TOUT_KEY);
-    if (tout_as_str != NULL) {
-        tout = (uint32_t)strtoul(tout_as_str, NULL, 10);
+    if (_z_endpoint_config_is_ws(&zl->_endpoint._config)) {
+        const _z_ws_config_t *cfg = _z_endpoint_config_get_ws(&zl->_endpoint._config);
+        if (cfg->_tout != 0) {
+            tout = cfg->_tout;
+        }
     }
 
     return _z_ws_transport_open(&zl->_socket._ws, tout);

@@ -49,30 +49,40 @@ static char *__z_convert_address_bt(_z_string_t *address) {
 }
 
 z_result_t _z_f_link_open_bt(_z_link_t *self) {
-    const char *mode_str = _z_str_intmap_get(&self->_endpoint._config, BT_CONFIG_MODE_KEY);
-    uint8_t mode = (strcmp(mode_str, "master") == 0) ? _Z_BT_MODE_MASTER : _Z_BT_MODE_SLAVE;
-    const char *profile_str = _z_str_intmap_get(&self->_endpoint._config, BT_CONFIG_PROFILE_KEY);
-    uint8_t profile = (strcmp(profile_str, "spp") == 0) ? _Z_BT_PROFILE_SPP : _Z_BT_PROFILE_UNSUPPORTED;
+    const char *mode_str = NULL;
+    const char *profile_str = NULL;
     uint32_t tout = Z_CONFIG_SOCKET_TIMEOUT;
-    char *tout_as_str = _z_str_intmap_get(&self->_endpoint._config, BT_CONFIG_TOUT_KEY);
-    if (tout_as_str != NULL) {
-        tout = (uint32_t)strtoul(tout_as_str, NULL, 10);
+    if (_z_endpoint_config_is_bt(&self->_endpoint._config)) {
+        const _z_bt_config_t *cfg = _z_endpoint_config_get_bt(&self->_endpoint._config);
+        mode_str = _z_string_data(&cfg->_mode);
+        profile_str = _z_string_data(&cfg->_profile);
+        if (cfg->_tout != 0) {
+            tout = cfg->_tout;
+        }
     }
+    uint8_t mode = ((mode_str != NULL) && (strcmp(mode_str, "master") == 0)) ? _Z_BT_MODE_MASTER : _Z_BT_MODE_SLAVE;
+    uint8_t profile =
+        ((profile_str != NULL) && (strcmp(profile_str, "spp") == 0)) ? _Z_BT_PROFILE_SPP : _Z_BT_PROFILE_UNSUPPORTED;
 
     self->_socket._bt._gname = __z_convert_address_bt(&self->_endpoint._locator._address);
     return _z_open_bt(&self->_socket._bt._sock, self->_socket._bt._gname, mode, profile, tout);
 }
 
 z_result_t _z_f_link_listen_bt(_z_link_t *self) {
-    const char *mode_str = _z_str_intmap_get(&self->_endpoint._config, BT_CONFIG_MODE_KEY);
-    uint8_t mode = (strcmp(mode_str, "master") == 0) ? _Z_BT_MODE_MASTER : _Z_BT_MODE_SLAVE;
-    const char *profile_str = _z_str_intmap_get(&self->_endpoint._config, BT_CONFIG_PROFILE_KEY);
-    uint8_t profile = (strcmp(profile_str, "spp") == 0) ? _Z_BT_PROFILE_SPP : _Z_BT_PROFILE_UNSUPPORTED;
+    const char *mode_str = NULL;
+    const char *profile_str = NULL;
     uint32_t tout = Z_CONFIG_SOCKET_TIMEOUT;
-    char *tout_as_str = _z_str_intmap_get(&self->_endpoint._config, BT_CONFIG_TOUT_KEY);
-    if (tout_as_str != NULL) {
-        tout = (uint32_t)strtoul(tout_as_str, NULL, 10);
+    if (_z_endpoint_config_is_bt(&self->_endpoint._config)) {
+        const _z_bt_config_t *cfg = _z_endpoint_config_get_bt(&self->_endpoint._config);
+        mode_str = _z_string_data(&cfg->_mode);
+        profile_str = _z_string_data(&cfg->_profile);
+        if (cfg->_tout != 0) {
+            tout = cfg->_tout;
+        }
     }
+    uint8_t mode = ((mode_str != NULL) && (strcmp(mode_str, "master") == 0)) ? _Z_BT_MODE_MASTER : _Z_BT_MODE_SLAVE;
+    uint8_t profile =
+        ((profile_str != NULL) && (strcmp(profile_str, "spp") == 0)) ? _Z_BT_PROFILE_SPP : _Z_BT_PROFILE_UNSUPPORTED;
 
     self->_socket._bt._gname = __z_convert_address_bt(&self->_endpoint._locator._address);
     return _z_listen_bt(&self->_socket._bt._sock, self->_socket._bt._gname, mode, profile, tout);

@@ -38,9 +38,11 @@ z_result_t _z_endpoint_tcp_valid(_z_endpoint_t *endpoint) {
 
 z_result_t _z_f_link_open_tcp(_z_link_t *zl) {
     uint32_t tout = Z_CONFIG_SOCKET_TIMEOUT;
-    char *tout_as_str = _z_str_intmap_get(&zl->_endpoint._config, TCP_CONFIG_TOUT_KEY);
-    if (tout_as_str != NULL) {
-        tout = (uint32_t)strtoul(tout_as_str, NULL, 10);
+    if (_z_endpoint_config_is_tcp(&zl->_endpoint._config)) {
+        const _z_tcp_config_t *cfg = _z_endpoint_config_get_tcp(&zl->_endpoint._config);
+        if (cfg->_tout != 0) {
+            tout = cfg->_tout;
+        }
     }
 
     return _z_tcp_open(&zl->_socket._tcp._sock, zl->_socket._tcp._rep, tout);
