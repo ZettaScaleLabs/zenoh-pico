@@ -44,42 +44,75 @@ z_result_t _z_endpoint_tls_valid(_z_endpoint_t *endpoint) {
     return ret;
 }
 
-static _z_str_intmap_t _z_tls_merge_config(_z_str_intmap_t *endpoint_cfg, const _z_config_t *session_cfg) {
-    _z_str_intmap_t cfg;
-    if (endpoint_cfg != NULL) {
-        _z_str_intmap_move(&cfg, endpoint_cfg);
-    } else {
-        cfg = _z_str_intmap_make();
+// If `cred` is unset, take its value from the session config: prefer the path
+// form, falling back to the base64 form.
+static void _z_tls_cred_from_session(_z_tls_cert_source_t *cred, const _z_config_t *session_cfg, uint8_t path_key,
+                                     uint8_t base64_key) {
+    if (_z_tls_cert_source_is_path(cred) || _z_tls_cert_source_is_base64(cred)) {
+        return;
     }
-    if (session_cfg == NULL) {
-        return cfg;
+    const char *path_val = _z_config_get(session_cfg, path_key);
+    if (path_val != NULL) {
+        _z_string_t s = _z_string_copy_from_str(path_val);
+        *cred = _z_tls_cert_source_from_path(&s);
+        return;
     }
-    static const struct {
-        uint8_t locator_key;
-        uint8_t session_key;
-    } mapping[] = {{TLS_CONFIG_ROOT_CA_CERTIFICATE_KEY, Z_CONFIG_TLS_ROOT_CA_CERTIFICATE_KEY},
-                   {TLS_CONFIG_ROOT_CA_CERTIFICATE_BASE64_KEY, Z_CONFIG_TLS_ROOT_CA_CERTIFICATE_BASE64_KEY},
-                   {TLS_CONFIG_LISTEN_PRIVATE_KEY_KEY, Z_CONFIG_TLS_LISTEN_PRIVATE_KEY_KEY},
-                   {TLS_CONFIG_LISTEN_PRIVATE_KEY_BASE64_KEY, Z_CONFIG_TLS_LISTEN_PRIVATE_KEY_BASE64_KEY},
-                   {TLS_CONFIG_LISTEN_CERTIFICATE_KEY, Z_CONFIG_TLS_LISTEN_CERTIFICATE_KEY},
-                   {TLS_CONFIG_LISTEN_CERTIFICATE_BASE64_KEY, Z_CONFIG_TLS_LISTEN_CERTIFICATE_BASE64_KEY},
-                   {TLS_CONFIG_ENABLE_MTLS_KEY, Z_CONFIG_TLS_ENABLE_MTLS_KEY},
-                   {TLS_CONFIG_CONNECT_PRIVATE_KEY_KEY, Z_CONFIG_TLS_CONNECT_PRIVATE_KEY_KEY},
-                   {TLS_CONFIG_CONNECT_PRIVATE_KEY_BASE64_KEY, Z_CONFIG_TLS_CONNECT_PRIVATE_KEY_BASE64_KEY},
-                   {TLS_CONFIG_CONNECT_CERTIFICATE_KEY, Z_CONFIG_TLS_CONNECT_CERTIFICATE_KEY},
-                   {TLS_CONFIG_CONNECT_CERTIFICATE_BASE64_KEY, Z_CONFIG_TLS_CONNECT_CERTIFICATE_BASE64_KEY},
-                   {TLS_CONFIG_VERIFY_NAME_ON_CONNECT_KEY, Z_CONFIG_TLS_VERIFY_NAME_ON_CONNECT_KEY}};
+    const char *b64_val = _z_config_get(session_cfg, base64_key);
+    if (b64_val != NULL) {
+        _z_string_t s = _z_string_copy_from_str(b64_val);
+        *cred = _z_tls_cert_source_from_base64(&s);
+    }
+}
 
-    for (size_t i = 0; i < sizeof(mapping) / sizeof(mapping[0]); i++) {
-        if (_z_str_intmap_get(&cfg, mapping[i].locator_key) != NULL) {
-            continue;
-        }
-        const char *value = _z_config_get(session_cfg, mapping[i].session_key);
+static bool _z_tls_session_opt_is_true(const char *val) {
+    if (val == NULL) {
+        return true;
+    }
+    char c = val[0];
+    return !(c == '0' || c == 'n' || c == 'N' || c == 'f' || c == 'F');
+}
+
+// Fill any field not already set in the typed endpoint TLS config from the
+// session config. Endpoint-provided values take precedence. The endpoint config
+// is upgraded to the `tls` alternative if it was not already.
+static void _z_tls_apply_session_config(_z_endpoint_config_t *endpoint_cfg, const _z_config_t *session_cfg) {
+    if (session_cfg == NULL) {
+        return;
+    }
+    if (!_z_endpoint_config_is_tls(endpoint_cfg)) {
+        _z_endpoint_config_destroy(endpoint_cfg);
+        _z_tls_config_t empty;
+        memset(&empty, 0, sizeof(empty));
+        empty._enable_mtls = false;
+        empty._verify_name_on_connect = true;
+        *endpoint_cfg = _z_endpoint_config_from_tls(&empty);
+    }
+    _z_tls_config_t *t = _z_endpoint_config_get_tls(endpoint_cfg);
+
+    _z_tls_cred_from_session(&t->_root_ca_certificate, session_cfg, Z_CONFIG_TLS_ROOT_CA_CERTIFICATE_KEY,
+                             Z_CONFIG_TLS_ROOT_CA_CERTIFICATE_BASE64_KEY);
+    _z_tls_cred_from_session(&t->_listen_private_key, session_cfg, Z_CONFIG_TLS_LISTEN_PRIVATE_KEY_KEY,
+                             Z_CONFIG_TLS_LISTEN_PRIVATE_KEY_BASE64_KEY);
+    _z_tls_cred_from_session(&t->_listen_certificate, session_cfg, Z_CONFIG_TLS_LISTEN_CERTIFICATE_KEY,
+                             Z_CONFIG_TLS_LISTEN_CERTIFICATE_BASE64_KEY);
+    _z_tls_cred_from_session(&t->_connect_private_key, session_cfg, Z_CONFIG_TLS_CONNECT_PRIVATE_KEY_KEY,
+                             Z_CONFIG_TLS_CONNECT_PRIVATE_KEY_BASE64_KEY);
+    _z_tls_cred_from_session(&t->_connect_certificate, session_cfg, Z_CONFIG_TLS_CONNECT_CERTIFICATE_KEY,
+                             Z_CONFIG_TLS_CONNECT_CERTIFICATE_BASE64_KEY);
+    if (!t->_has_enable_mtls) {
+        const char *value = _z_config_get(session_cfg, Z_CONFIG_TLS_ENABLE_MTLS_KEY);
         if (value != NULL) {
-            _z_str_intmap_insert(&cfg, mapping[i].locator_key, _z_str_clone(value));
+            t->_enable_mtls = _z_tls_session_opt_is_true(value);
+            t->_has_enable_mtls = true;
         }
     }
-    return cfg;
+    if (!t->_has_verify_name_on_connect) {
+        const char *value = _z_config_get(session_cfg, Z_CONFIG_TLS_VERIFY_NAME_ON_CONNECT_KEY);
+        if (value != NULL) {
+            t->_verify_name_on_connect = _z_tls_session_opt_is_true(value);
+            t->_has_verify_name_on_connect = true;
+        }
+    }
 }
 
 static z_result_t _z_f_link_open_tls(_z_link_t *self) {
@@ -99,7 +132,8 @@ static z_result_t _z_f_link_open_tls(_z_link_t *self) {
         return ret;
     }
 
-    ret = _z_open_tls(&self->_socket._tls, &rep, hostname, &self->_endpoint._config, false);
+    _z_tls_config_t *cfg = _z_endpoint_config_get_tls(&self->_endpoint._config);
+    ret = _z_open_tls(&self->_socket._tls, &rep, hostname, cfg, false);
     _z_tcp_endpoint_clear(&rep);
     z_free(hostname);
     if (ret != _Z_RES_OK) {
@@ -125,7 +159,8 @@ static z_result_t _z_f_link_listen_tls(_z_link_t *self) {
         return ret;
     }
 
-    ret = _z_listen_tls(&self->_socket._tls, &rep, &self->_endpoint._config);
+    _z_tls_config_t *cfg_map = _z_endpoint_config_get_tls(&self->_endpoint._config);
+    ret = _z_listen_tls(&self->_socket._tls, &rep, cfg_map);
     _z_tcp_endpoint_clear(&rep);
     if (ret != _Z_RES_OK) {
         _Z_ERROR("TLS listen failed");
@@ -196,12 +231,13 @@ z_result_t _z_new_link_tls(_z_link_t *zl, _z_endpoint_t *endpoint, const _z_conf
 
     zl->_mtu = _z_get_link_mtu_tls();
 
-    _z_str_intmap_t cfg = _z_tls_merge_config(&endpoint->_config, session_cfg);
+    // Move the endpoint into the link, then merge any session-provided TLS
+    // options into its typed config (endpoint values take precedence).
     zl->_endpoint = *endpoint;
-    zl->_endpoint._config = cfg;
-    _z_str_intmap_clear(&endpoint->_config);
-    _Z_DEBUG("TLS locator: '%.*s'", (int)_z_string_len(&endpoint->_locator._address),
-             _z_string_data(&endpoint->_locator._address));
+    _z_endpoint_init(endpoint);
+    _z_tls_apply_session_config(&zl->_endpoint._config, session_cfg);
+    _Z_DEBUG("TLS locator: '%.*s'", (int)_z_string_len(&zl->_endpoint._locator._address),
+             _z_string_data(&zl->_endpoint._locator._address));
 
     zl->_open_f = _z_f_link_open_tls;
     zl->_listen_f = _z_f_link_listen_tls;
@@ -236,19 +272,18 @@ z_result_t _z_new_peer_tls(_z_endpoint_t *endpoint, _z_sys_net_socket_t *socket,
         goto cleanup;
     }
 
-    _z_str_intmap_t cfg = _z_tls_merge_config(&endpoint->_config, session_cfg);
-    ret = _z_open_tls((_z_tls_socket_t *)socket->_tls_sock, &sys_endpoint, hostname, &cfg, true);
+    _z_tls_apply_session_config(&endpoint->_config, session_cfg);
+    _z_tls_config_t *cfg = _z_endpoint_config_get_tls(&endpoint->_config);
+    ret = _z_open_tls((_z_tls_socket_t *)socket->_tls_sock, &sys_endpoint, hostname, cfg, true);
     if (ret != _Z_RES_OK) {
         z_free(socket->_tls_sock);
         socket->_tls_sock = NULL;
-        _z_str_intmap_clear(&cfg);
-        _z_str_intmap_clear(&endpoint->_config);
+        _z_endpoint_config_destroy(&endpoint->_config);
         goto cleanup;
     }
 
     socket->_fd = ((_z_tls_socket_t *)socket->_tls_sock)->_sock._fd;
-    _z_str_intmap_clear(&cfg);
-    _z_str_intmap_clear(&endpoint->_config);
+    _z_endpoint_config_destroy(&endpoint->_config);
 
 cleanup:
     z_free(hostname);

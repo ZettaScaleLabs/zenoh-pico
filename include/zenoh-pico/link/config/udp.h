@@ -15,41 +15,43 @@
 #ifndef ZENOH_PICO_LINK_CONFIG_UDP_H
 #define ZENOH_PICO_LINK_CONFIG_UDP_H
 
-#include "zenoh-pico/collections/intmap.h"
+#include <stdint.h>
+
 #include "zenoh-pico/collections/string.h"
+#include "zenoh-pico/config.h"
+#include "zenoh-pico/utils/result.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define UDP_CONFIG_ARGC 3
+// ── Typed config struct ──────────────────────────────────────────────────────
+//
+// This alternative of the `_z_endpoint_config_t` variant is included into the
+// variant (in `endpoint_config.h`) only when a UDP link is enabled.
 
-#define UDP_CONFIG_IFACE_KEY 0x01
+// udp#iface=<name>;tout=<ms>;join=<group>
+typedef struct {
+    _z_string_t _iface;
+    _z_string_t _join;
+    uint32_t _tout;
+} _z_udp_config_t;
+
+static inline void _z_udp_config_clear(_z_udp_config_t *c) {
+    _z_string_clear(&c->_iface);
+    _z_string_clear(&c->_join);
+}
+
 #define UDP_CONFIG_IFACE_STR "iface"
-
-#define UDP_CONFIG_TOUT_KEY 0x02
 #define UDP_CONFIG_TOUT_STR "tout"
-
-#define UDP_CONFIG_JOIN_KEY 0x03
 #define UDP_CONFIG_JOIN_STR "join"
 
 #if Z_FEATURE_LINK_UDP_UNICAST == 1 || Z_FEATURE_LINK_UDP_MULTICAST == 1
-#define UDP_CONFIG_MAPPING_BUILD                 \
-    _z_str_intmapping_t args[UDP_CONFIG_ARGC];   \
-    args[0]._key = UDP_CONFIG_IFACE_KEY;         \
-    args[0]._str = (char *)UDP_CONFIG_IFACE_STR; \
-    args[1]._key = UDP_CONFIG_TOUT_KEY;          \
-    args[1]._str = (char *)UDP_CONFIG_TOUT_STR;  \
-    args[2]._key = UDP_CONFIG_JOIN_KEY;          \
-    args[2]._str = (char *)UDP_CONFIG_JOIN_STR;
-
-size_t _z_udp_config_strlen(const _z_str_intmap_t *s);
-
-void _z_udp_config_onto_str(char *dst, size_t dst_len, const _z_str_intmap_t *s);
-char *_z_udp_config_to_str(const _z_str_intmap_t *s);
-
-z_result_t _z_udp_config_from_str(_z_str_intmap_t *strint, const char *s);
-z_result_t _z_udp_config_from_strn(_z_str_intmap_t *strint, const char *s, size_t n);
+// ── Typed config (de)serialization (intmap-free) ─────────────────────────────
+// Parse the config portion of a `udp#...` endpoint into a typed struct.
+z_result_t _z_udp_config_typed_from_strn(_z_udp_config_t *cfg, const char *s, size_t n);
+// Serialize a typed UDP config into its `key=value;...` string form (heap).
+char *_z_udp_config_typed_to_str(const _z_udp_config_t *cfg);
 #endif
 
 #ifdef __cplusplus

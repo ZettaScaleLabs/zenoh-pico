@@ -43,7 +43,7 @@ int main(void) {
     assert(_z_string_equals(&lc._protocol, &str) == true);
     str = _z_string_alias_str("127.0.0.1:7447");
     assert(_z_string_equals(&lc._address, &str) == true);
-    assert(_z_str_intmap_is_empty(&lc._metadata) == true);
+    // @TODO: assert protocol-level metadata once it is implemented
     _z_locator_clear(&lc);
 
     str = _z_string_alias_str("");
@@ -87,8 +87,8 @@ int main(void) {
     assert(_z_string_equals(&ep._locator._protocol, &str) == true);
     str = _z_string_alias_str("127.0.0.1:7447");
     assert(_z_string_equals(&ep._locator._address, &str) == true);
-    assert(_z_str_intmap_is_empty(&ep._locator._metadata) == true);
-    assert(_z_str_intmap_is_empty(&ep._config) == true);
+    // @TODO: assert protocol-level metadata once it is implemented
+    assert(_z_endpoint_config_is_none(&ep._config) == true);
     _z_endpoint_clear(&ep);
 
     str = _z_string_alias_str("");
@@ -127,11 +127,11 @@ int main(void) {
     assert(_z_string_equals(&ep._locator._protocol, &str) == true);
     str = _z_string_alias_str("127.0.0.1:7447");
     assert(_z_string_equals(&ep._locator._address, &str) == true);
-    assert(_z_str_intmap_is_empty(&ep._locator._metadata) == true);
-    assert(_z_str_intmap_len(&ep._config) == 1);
-    char *p = _z_str_intmap_get(&ep._config, UDP_CONFIG_IFACE_KEY);
-    assert(_z_str_eq(p, "eth0") == true);
-    (void)(p);
+    // @TODO: assert protocol-level metadata once it is implemented
+    assert(_z_endpoint_config_is_udp(&ep._config) == true);
+    const _z_udp_config_t *udp_cfg = _z_endpoint_config_get_udp(&ep._config);
+    assert(_z_string_check(&udp_cfg->_iface) == true);
+    assert(_z_str_eq(_z_string_data(&udp_cfg->_iface), "eth0") == true);
     _z_endpoint_clear(&ep);
 
     str = _z_string_alias_str("udp/127.0.0.1:7447#invalid=eth0");
@@ -154,9 +154,9 @@ int main(void) {
     assert(_z_string_equals(&ep._locator._protocol, &str) == true);
     str = _z_string_alias_str("localhost:7447");
     assert(_z_string_equals(&ep._locator._address, &str) == true);
-    assert(_z_str_intmap_len(&ep._config) == 1);
-    char *tout = _z_str_intmap_get(&ep._config, WS_CONFIG_TOUT_KEY);
-    assert(_z_str_eq(tout, "1000") == true);
+    assert(_z_endpoint_config_is_ws(&ep._config) == true);
+    const _z_ws_config_t *ws_cfg = _z_endpoint_config_get_ws(&ep._config);
+    assert(ws_cfg->_tout == 1000);
     _z_endpoint_clear(&ep);
 
     str = _z_string_alias_str("ws/[::1]:7447");
@@ -176,9 +176,11 @@ int main(void) {
     assert(_z_string_equals(&ep._locator._protocol, &str) == true);
     str = _z_string_alias_str("localhost:7447");
     assert(_z_string_equals(&ep._locator._address, &str) == true);
-    assert(_z_str_intmap_len(&ep._config) == 1);
-    char *ca_path = _z_str_intmap_get(&ep._config, TLS_CONFIG_ROOT_CA_CERTIFICATE_KEY);
-    assert(_z_str_eq(ca_path, "/path/ca.pem") == true);
+    assert(_z_endpoint_config_is_tls(&ep._config) == true);
+    const _z_tls_config_t *tls_cfg = _z_endpoint_config_get_tls(&ep._config);
+    assert(_z_tls_cert_source_is_path(&tls_cfg->_root_ca_certificate) == true);
+    const _z_string_t *ca_path = _z_tls_cert_source_get_path((_z_tls_cert_source_t *)&tls_cfg->_root_ca_certificate);
+    assert(_z_str_eq(_z_string_data(ca_path), "/path/ca.pem") == true);
     _z_endpoint_clear(&ep);
 
     str = _z_string_alias_str("tls/[::1]:7447");

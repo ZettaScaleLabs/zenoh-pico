@@ -19,6 +19,7 @@
 #include "zenoh-pico/collections/element.h"
 #include "zenoh-pico/collections/intmap.h"
 #include "zenoh-pico/collections/string.h"
+#include "zenoh-pico/link/endpoint_config.h"
 #include "zenoh-pico/utils/result.h"
 
 #ifdef __cplusplus
@@ -48,7 +49,9 @@ extern "C" {
 #define LOCATOR_PROTOCOL_SEPARATOR '/'
 #define LOCATOR_METADATA_SEPARATOR '?'
 typedef struct {
-    _z_str_intmap_t _metadata;
+    // @TODO: define protocol-level metadata. A `_z_str_intmap_t _metadata` field used to be stored here, but it was
+    // never populated nor consumed by any logic, so it was removed. Re-add it when protocol-level metadata is actually
+    // implemented.
     _z_string_t _protocol;
     _z_string_t _address;
 } _z_locator_t;
@@ -72,13 +75,18 @@ _Z_ARRAY_DEFINE(_z_locator, _z_locator_t)
 
 typedef struct {
     _z_locator_t _locator;
-    _z_str_intmap_t _config;
+    _z_endpoint_config_t _config;
 } _z_endpoint_t;
 
 _z_string_t _z_endpoint_to_string(const _z_endpoint_t *e);
 z_result_t _z_endpoint_from_string(_z_endpoint_t *ep, const _z_string_t *s);
+void _z_endpoint_init(_z_endpoint_t *endpoint);
 void _z_endpoint_clear(_z_endpoint_t *ep);
 void _z_endpoint_free(_z_endpoint_t **ep);
+
+// Serialize the typed endpoint config back to its `key=value;...` string form
+// (heap-allocated). Returns NULL when there is no config or on error.
+char *_z_endpoint_config_to_string(const _z_endpoint_config_t *cfg);
 
 char *_z_endpoint_parse_host(const _z_string_t *addr);
 char *_z_endpoint_parse_port(const _z_string_t *addr);

@@ -288,25 +288,6 @@ static z_result_t _ze_admin_space_encode_transport_type(_z_json_encoder_t *je, i
     }
 }
 
-static z_result_t _ze_admin_space_encode_str_intmap(_z_json_encoder_t *je, const _z_str_intmap_t *map) {
-    _Z_RETURN_IF_ERR(_z_json_encoder_start_object(je));
-
-    _z_str_intmap_iterator_t it = _z_str_intmap_iterator_make(map);
-    while (_z_str_intmap_iterator_next(&it)) {
-        size_t key = _z_str_intmap_iterator_key(&it);
-        char key_buf[21];  // enough for 64-bit size_t
-        int n = snprintf(key_buf, sizeof(key_buf), "%zu", key);
-        if (n <= 0 || (size_t)n >= sizeof(key_buf)) {
-            return _Z_ERR_INVALID;
-        }
-        _Z_RETURN_IF_ERR(_z_json_encoder_write_key(je, key_buf));
-
-        char *value = _z_str_intmap_iterator_value(&it);
-        _Z_RETURN_IF_ERR(_z_json_encoder_write_string(je, value));
-    }
-    return _z_json_encoder_end_object(je);
-}
-
 static z_result_t _ze_admin_space_encode_link(_z_json_encoder_t *je, const _z_link_t *link) {
     _Z_RETURN_IF_ERR(_z_json_encoder_write_key(je, "link"));
     _Z_RETURN_IF_ERR(_z_json_encoder_start_object(je));
@@ -341,15 +322,13 @@ static z_result_t _ze_admin_space_encode_link(_z_json_encoder_t *je, const _z_li
     _Z_RETURN_IF_ERR(_z_json_encoder_start_object(je));
     _Z_RETURN_IF_ERR(_z_json_encoder_write_key(je, "locator"));
     _Z_RETURN_IF_ERR(_z_json_encoder_start_object(je));
-    _Z_RETURN_IF_ERR(_z_json_encoder_write_key(je, "metadata"));
-    _Z_RETURN_IF_ERR(_ze_admin_space_encode_str_intmap(je, &link->_endpoint._locator._metadata));
+    // TODO encode link metadata ?
     _Z_RETURN_IF_ERR(_z_json_encoder_write_key(je, "protocol"));
     _Z_RETURN_IF_ERR(_z_json_encoder_write_z_string(je, &link->_endpoint._locator._protocol));
     _Z_RETURN_IF_ERR(_z_json_encoder_write_key(je, "address"));
     _Z_RETURN_IF_ERR(_z_json_encoder_write_z_string(je, &link->_endpoint._locator._address));
     _Z_RETURN_IF_ERR(_z_json_encoder_end_object(je));
-    _Z_RETURN_IF_ERR(_z_json_encoder_write_key(je, "config"));
-    _Z_RETURN_IF_ERR(_ze_admin_space_encode_str_intmap(je, &link->_endpoint._config));
+    // TODO encode link config ?
     _Z_RETURN_IF_ERR(_z_json_encoder_end_object(je));
 
     _Z_RETURN_IF_ERR(_z_json_encoder_write_key(je, "capabilities"));
