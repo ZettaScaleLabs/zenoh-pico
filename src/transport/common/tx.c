@@ -87,7 +87,7 @@ static z_result_t _z_transport_tx_send_fragment_inner(_z_transport_common_t *ztc
         // Send fragment
         __unsafe_z_finalize_wbuf(&ztc->_wbuf, ztc->_link->_cap._flow);
         if (peers == NULL) {
-            _Z_RETURN_IF_ERR(_z_link_send_wbuf(ztc->_link, &ztc->_wbuf, NULL));
+            _Z_RETURN_IF_ERR(_z_link_send_wbuf(ztc->_link, &ztc->_wbuf));
         } else {
             _z_transport_peer_unicast_slist_t *curr_list = peers;
             while (curr_list != NULL) {
@@ -142,7 +142,7 @@ static z_result_t _z_transport_tx_flush_buffer(_z_transport_common_t *ztc, _z_tr
     __unsafe_z_finalize_wbuf(&ztc->_wbuf, ztc->_link->_cap._flow);
     // Send network message
     if (peers == NULL) {
-        _Z_RETURN_IF_ERR(_z_link_send_wbuf(ztc->_link, &ztc->_wbuf, NULL));
+        _Z_RETURN_IF_ERR(_z_link_send_wbuf(ztc->_link, &ztc->_wbuf));
     } else {
         _z_transport_peer_unicast_slist_t *curr_list = peers;
         while (curr_list != NULL) {
@@ -402,7 +402,7 @@ z_result_t _z_send_t_msg(_z_transport_t *zt, const _z_transport_message_t *t_msg
     return ret;
 }
 
-z_result_t _z_link_send_t_msg(const _z_link_t *zl, const _z_transport_message_t *t_msg, _z_sys_net_socket_t *socket) {
+z_result_t _z_link_send_t_msg(const _z_link_t *zl, const _z_transport_message_t *t_msg, _z_link_peer_t *peer) {
     z_result_t ret = _Z_RES_OK;
 
     // Create and prepare the buffer to serialize the message on
@@ -446,8 +446,9 @@ z_result_t _z_link_send_t_msg(const _z_link_t *zl, const _z_transport_message_t 
                 ret = _Z_ERR_GENERIC;
                 break;
         }
-        // Send the wbuf on the socket
-        ret = _z_link_send_wbuf(zl, &wbf, socket);
+    }
+    if (ret == _Z_RES_OK) {
+        ret = peer == NULL ? _z_link_send_wbuf(zl, &wbf) : _z_link_peer_send_wbuf(zl, &wbf, peer);
     }
     _z_wbuf_clear(&wbf);
 
@@ -520,9 +521,14 @@ z_result_t _z_send_n_msg(_z_session_t *zn, const _z_network_message_t *z_msg, z_
                         // by that exact object size.
                         // Flawfinder: ignore [CWE-120]
                         memcpy(dst_peer, src_peer, sizeof(*dst_peer));
-                        dst_peer->_link_peer = _z_link_peer_alias(&src_peer->_link_peer);
-                        // Send message
-                        ret = _z_transport_tx_send_n_msg(ztc, z_msg, reliability, cong_ctrl, dst_list);
+                        dst_peer->_link_peer = _z_link_peer_clone(&src_peer->_link_peer);
+                        if (_z_link_peer_check(&dst_peer->_link_peer)) {
+                            // Send message
+                            ret = _z_transport_tx_send_n_msg(ztc, z_msg, reliability, cong_ctrl, dst_list);
+                            _z_link_peer_clear(&dst_peer->_link_peer);
+                        } else {
+                            ret = _Z_ERR_SYSTEM_OUT_OF_MEMORY;
+                        }
                         z_free(dst_list);
                     }
                 }
