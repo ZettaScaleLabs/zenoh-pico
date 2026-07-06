@@ -366,7 +366,7 @@ z_result_t _z_link_send_wbuf(const _z_link_t *link, const _z_wbuf_t *wbf) {
     for (size_t i = 0; (i < _z_wbuf_len_iosli(wbf)) && (ret == _Z_RES_OK); i++) {
         _z_slice_t bs = _z_iosli_to_bytes(_z_wbuf_get_iosli(wbf, i));
         size_t n = bs.len;
-        do {
+        while (n > (size_t)0) {
             size_t wb = link->_write_f(link, bs.start, n);
             if ((wb == SIZE_MAX) || (wb == 0) || (wb > n)) {
                 _Z_ERROR_LOG(_Z_ERR_TRANSPORT_TX_FAILED);
@@ -381,7 +381,7 @@ z_result_t _z_link_send_wbuf(const _z_link_t *link, const _z_wbuf_t *wbf) {
             }
             n = n - wb;
             bs.start = bs.start + wb;
-        } while (n > (size_t)0);
+        }
     }
 
     return ret;
@@ -391,17 +391,11 @@ z_result_t _z_link_peer_send_wbuf(const _z_link_t *link, const _z_wbuf_t *wbf, c
     z_result_t ret = _Z_RES_OK;
     bool link_is_streamed = link->_cap._flow == Z_LINK_CAP_FLOW_STREAM;
 
-    const _z_link_peer_ops_t *ops = _z_link_peer_check(peer) ? peer->_impl._val->_ops : NULL;
-    if ((ops == NULL) || (ops->_write_f == NULL)) {
-        _Z_ERROR_LOG(_Z_ERR_TRANSPORT_TX_FAILED);
-        _Z_ERROR_RETURN(_Z_ERR_TRANSPORT_TX_FAILED);
-    }
-
     for (size_t i = 0; (i < _z_wbuf_len_iosli(wbf)) && (ret == _Z_RES_OK); i++) {
         _z_slice_t bs = _z_iosli_to_bytes(_z_wbuf_get_iosli(wbf, i));
         size_t n = bs.len;
-        do {
-            size_t wb = ops->_write_f(link, peer, bs.start, n);
+        while (n > (size_t)0) {
+            size_t wb = _z_link_peer_write(link, peer, bs.start, n);
             // Stream links may complete a frame across multiple writes; datagram links must send it atomically.
             if ((wb == SIZE_MAX) || (wb == 0) || (wb > n) || (!link_is_streamed && wb != n)) {
                 _Z_ERROR_LOG(_Z_ERR_TRANSPORT_TX_FAILED);
@@ -410,7 +404,7 @@ z_result_t _z_link_peer_send_wbuf(const _z_link_t *link, const _z_wbuf_t *wbf, c
             }
             n = n - wb;
             bs.start = bs.start + wb;
-        } while (n > (size_t)0);
+        }
     }
 
     return ret;
