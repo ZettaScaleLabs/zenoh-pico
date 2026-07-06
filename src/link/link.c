@@ -368,18 +368,19 @@ z_result_t _z_link_send_wbuf(const _z_link_t *link, const _z_wbuf_t *wbf) {
         size_t n = bs.len;
         do {
             size_t wb = link->_write_f(link, bs.start, n);
-            if ((wb == SIZE_MAX) || (wb > n)) {
+            if ((wb == SIZE_MAX) || (wb == 0) || (wb > n)) {
                 _Z_ERROR_LOG(_Z_ERR_TRANSPORT_TX_FAILED);
                 ret = _Z_ERR_TRANSPORT_TX_FAILED;
                 break;
             }
-            if (link_is_streamed && wb != n) {
+            // Stream links may complete a frame across multiple writes; datagram links must send it atomically.
+            if (!link_is_streamed && wb != n) {
                 _Z_ERROR_LOG(_Z_ERR_TRANSPORT_TX_FAILED);
                 ret = _Z_ERR_TRANSPORT_TX_FAILED;
                 break;
             }
             n = n - wb;
-            bs.start = bs.start + (bs.len - n);
+            bs.start = bs.start + wb;
         } while (n > (size_t)0);
     }
 
@@ -401,13 +402,14 @@ z_result_t _z_link_peer_send_wbuf(const _z_link_t *link, const _z_wbuf_t *wbf, c
         size_t n = bs.len;
         do {
             size_t wb = ops->_write_f(link, peer, bs.start, n);
-            if ((wb == SIZE_MAX) || (wb > n) || (link_is_streamed && wb != n)) {
+            // Stream links may complete a frame across multiple writes; datagram links must send it atomically.
+            if ((wb == SIZE_MAX) || (wb == 0) || (wb > n) || (!link_is_streamed && wb != n)) {
                 _Z_ERROR_LOG(_Z_ERR_TRANSPORT_TX_FAILED);
                 ret = _Z_ERR_TRANSPORT_TX_FAILED;
                 break;
             }
             n = n - wb;
-            bs.start = bs.start + (bs.len - n);
+            bs.start = bs.start + wb;
         } while (n > (size_t)0);
     }
 
