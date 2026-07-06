@@ -27,32 +27,9 @@ concurrency:
 
 jobs:
   fuzz_scheduled_coverage:
-    name: Fuzzing and coverage (${{ matrix.profile.name }})
-    if: >-
-      (github.event_name == 'pull_request' &&
-      matrix.profile.trigger == 'pull_request') ||
-      github.event_name == 'workflow_dispatch' ||
-      github.event.schedule == matrix.profile.cron
+    name: Fuzzing and coverage
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ matrix.profile.timeout_minutes }}
-    strategy:
-      fail-fast: false
-      matrix:
-        profile:
-          - name: pr
-            trigger: pull_request
-            total_seconds: 300
-            timeout_minutes: 20
-          - name: daily
-            trigger: schedule
-            cron: "0 2 * * 1-6"
-            total_seconds: 3600
-            timeout_minutes: 90
-          - name: weekly
-            trigger: schedule
-            cron: "0 2 * * 0"
-            total_seconds: 18000
-            timeout_minutes: 390
+    timeout-minutes: 390
     env:
       FUZZ_TARGETS: >-
         z_fuzz_scouting_message_decode
@@ -68,6 +45,23 @@ jobs:
         run: |
           sudo apt update
           sudo apt install -y clang llvm ninja-build
+
+      - name: Select fuzz profile
+        id: profile
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "name=pr" >> "$GITHUB_OUTPUT"
+            echo "total_seconds=300" >> "$GITHUB_OUTPUT"
+            echo "schedule=n/a" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event.schedule }}" = "0 2 * * 0" ]; then
+            echo "name=weekly" >> "$GITHUB_OUTPUT"
+            echo "total_seconds=18000" >> "$GITHUB_OUTPUT"
+            echo "schedule=0 2 * * 0" >> "$GITHUB_OUTPUT"
+          else
+            echo "name=daily" >> "$GITHUB_OUTPUT"
+            echo "total_seconds=3600" >> "$GITHUB_OUTPUT"
+            echo "schedule=0 2 * * 1-6" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Configure fuzz build with coverage
         run: |
@@ -95,10 +89,10 @@ jobs:
         run: |
           set -euo pipefail
 
-          profile_dir="build-fuzz/coverage/${{ matrix.profile.name }}"
+          profile_dir="build-fuzz/coverage/${{ steps.profile.outputs.name }}"
           mkdir -p "$profile_dir"
 
-          total_seconds=${{ matrix.profile.total_seconds }}
+          total_seconds=${{ steps.profile.outputs.total_seconds }}
           target_count=3
           per_target_seconds=$(( total_seconds / target_count ))
           remainder_seconds=$(( total_seconds % target_count ))
@@ -110,10 +104,10 @@ jobs:
           )
 
           {
-            echo "# Scheduled Fuzz Coverage (${{ matrix.profile.name }})"
+            echo "# Scheduled Fuzz Coverage (${{ steps.profile.outputs.name }})"
             echo
             echo "- Trigger: \`${{ github.event_name }}\`"
-            echo "- Schedule: \`${{ matrix.profile.cron || 'n/a' }}\` (UTC)"
+            echo "- Schedule: \`${{ steps.profile.outputs.schedule }}\` (UTC)"
             echo "- Total fuzzing budget: $total_seconds seconds"
             echo "- Per-target budget: $per_target_seconds seconds"
             echo
@@ -169,6 +163,6 @@ jobs:
       - name: Upload fuzz coverage artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: fuzz-coverage-${{ matrix.profile.name }}
-          path: build-fuzz/coverage/${{ matrix.profile.name }}
+          name: fuzz-coverage-${{ steps.profile.outputs.name }}
+          path: build-fuzz/coverage/${{ steps.profile.outputs.name }}
           if-no-files-found: error
