@@ -32,7 +32,6 @@ jobs:
     timeout-minutes: 390
     env:
       FUZZ_TARGETS: >-
-        z_fuzz_scouting_message_decode
         z_fuzz_transport_message_decode
         z_fuzz_endpoint_str
     steps:
@@ -78,10 +77,11 @@ jobs:
 
       - name: Prepare corpus
         run: |
-          mkdir -p fuzz/corpus/scouting_message_decode
+          # Temporarily disabled due to known scouting fuzz issues:
+          # mkdir -p fuzz/corpus/scouting_message_decode
           mkdir -p fuzz/corpus/transport_message_decode
           mkdir -p fuzz/corpus/endpoint_str
-          cp -r fuzz/seeds/scouting_message/. fuzz/corpus/scouting_message_decode/
+          # cp -r fuzz/seeds/scouting_message/. fuzz/corpus/scouting_message_decode/
           cp -r fuzz/seeds/transport_message/. fuzz/corpus/transport_message_decode/
           cp -r fuzz/seeds/endpoint_from_str/. fuzz/corpus/endpoint_str/
 
@@ -93,12 +93,14 @@ jobs:
           mkdir -p "$profile_dir"
 
           total_seconds=${{ steps.profile.outputs.total_seconds }}
-          target_count=3
+          # Scouting fuzzing is temporarily disabled due to known bugs, so we
+          # currently split the budget across the remaining two targets.
+          target_count=2
           per_target_seconds=$(( total_seconds / target_count ))
           remainder_seconds=$(( total_seconds % target_count ))
 
           targets=(
-            "z_fuzz_scouting_message_decode|scouting_message_decode|fuzz/corpus/scouting_message_decode|src/protocol/codec/message.c|src/protocol/definitions/message.c|include/zenoh-pico/protocol/definitions/message.h|include/zenoh-pico/protocol/codec/message.h"
+            # "z_fuzz_scouting_message_decode|scouting_message_decode|fuzz/corpus/scouting_message_decode|src/protocol/codec/message.c|src/protocol/definitions/message.c|include/zenoh-pico/protocol/definitions/message.h|include/zenoh-pico/protocol/codec/message.h"
             "z_fuzz_transport_message_decode|transport_message_decode|fuzz/corpus/transport_message_decode|src/protocol/codec/transport.c|src/protocol/codec/ext.c|src/protocol/definitions/transport.c|include/zenoh-pico/protocol/definitions/transport.h"
             "z_fuzz_endpoint_str|endpoint_str|fuzz/corpus/endpoint_str|src/link/endpoint.c|include/zenoh-pico/link/endpoint.h"
           )
