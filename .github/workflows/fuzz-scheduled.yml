@@ -14,8 +14,6 @@
 name: Scheduled Fuzzing
 
 on:
-  pull_request:
-    branches: ["**"]
   schedule:
     - cron: "0 2 * * 1-6"
     - cron: "0 2 * * 0"
@@ -49,11 +47,7 @@ jobs:
       - name: Select fuzz profile
         id: profile
         run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            echo "name=pr" >> "$GITHUB_OUTPUT"
-            echo "total_seconds=300" >> "$GITHUB_OUTPUT"
-            echo "schedule=n/a" >> "$GITHUB_OUTPUT"
-          elif [ "${{ github.event.schedule }}" = "0 2 * * 0" ]; then
+          if [ "${{ github.event.schedule }}" = "0 2 * * 0" ]; then
             echo "name=weekly" >> "$GITHUB_OUTPUT"
             echo "total_seconds=18000" >> "$GITHUB_OUTPUT"
             echo "schedule=0 2 * * 0" >> "$GITHUB_OUTPUT"
