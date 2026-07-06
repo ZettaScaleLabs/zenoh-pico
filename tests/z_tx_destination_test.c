@@ -12,7 +12,7 @@
 //   ZettaScale Zenoh Team, <zenoh@zettascale.tech>
 //
 
-#include <assert.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -26,9 +26,21 @@
 
 #if Z_FEATURE_UNICAST_TRANSPORT == 1
 
+#define Z_TX_CHECK(expr)                                                             \
+    do {                                                                             \
+        if (!(expr)) {                                                               \
+            fprintf(stderr, "%s:%d: check failed: %s\n", __FILE__, __LINE__, #expr); \
+            return false;                                                            \
+        }                                                                            \
+    } while (0)
+
 typedef struct {
     size_t write_count;
     size_t byte_count;
+    size_t max_write;
+    bool zero_write;
+    uint8_t *capture;
+    size_t capture_capacity;
 } _z_tx_fake_write_state_t;
 
 typedef struct {
@@ -40,20 +52,33 @@ typedef struct {
 } _z_tx_fixture_t;
 
 static size_t _z_tx_fake_link_write(const _z_link_t *link, const uint8_t *ptr, size_t len) {
-    _ZP_UNUSED(ptr);
-
     _z_tx_fake_write_state_t *state = (_z_tx_fake_write_state_t *)_z_link_state_const(link);
+    len = state->zero_write ? 0 : (state->max_write != 0 && state->max_write < len) ? state->max_write : len;
     state->write_count++;
+    if (state->capture != NULL && state->byte_count < state->capture_capacity) {
+        size_t to_capture = len;
+        if (to_capture > state->capture_capacity - state->byte_count) {
+            to_capture = state->capture_capacity - state->byte_count;
+        }
+        memcpy(&state->capture[state->byte_count], ptr, to_capture);
+    }
     state->byte_count += len;
     return len;
 }
 
 static size_t _z_tx_fake_peer_write(const _z_link_t *link, const _z_link_peer_t *peer, const uint8_t *ptr, size_t len) {
     _ZP_UNUSED(link);
-    _ZP_UNUSED(ptr);
 
     _z_tx_fake_write_state_t *state = (_z_tx_fake_write_state_t *)_z_link_peer_state_const(peer);
+    len = state->zero_write ? 0 : (state->max_write != 0 && state->max_write < len) ? state->max_write : len;
     state->write_count++;
+    if (state->capture != NULL && state->byte_count < state->capture_capacity) {
+        size_t to_capture = len;
+        if (to_capture > state->capture_capacity - state->byte_count) {
+            to_capture = state->capture_capacity - state->byte_count;
+        }
+        memcpy(&state->capture[state->byte_count], ptr, to_capture);
+    }
     state->byte_count += len;
     return len;
 }
@@ -76,21 +101,22 @@ static _z_network_message_t _z_tx_test_message(void) {
     return msg;
 }
 
-static _z_transport_peer_unicast_t *_z_tx_fixture_add_peer(_z_tx_fixture_t *fixture, size_t idx) {
+static bool _z_tx_fixture_add_peer(_z_tx_fixture_t *fixture, size_t idx) {
     _z_transport_unicast_t *ztu = &fixture->session._tp._transport._unicast;
     _z_transport_peer_unicast_slist_t *old_head = ztu->_peers;
     _z_transport_peer_unicast_slist_t *new_head = _z_transport_peer_unicast_slist_push_empty(old_head);
-    assert(new_head != old_head);
+    Z_TX_CHECK(new_head != old_head);
     ztu->_peers = new_head;
 
     _z_transport_peer_unicast_t *peer = _z_transport_peer_unicast_slist_value(new_head);
     memset(peer, 0, sizeof(*peer));
-    assert(_z_link_peer_init(&peer->_link_peer, &_z_tx_fake_peer_ops, &fixture->peer_state[idx], NULL) == _Z_RES_OK);
+    Z_TX_CHECK(_z_link_peer_init(&peer->_link_peer, &_z_tx_fake_peer_ops, &fixture->peer_state[idx], NULL) ==
+               _Z_RES_OK);
     fixture->peer[idx] = peer;
-    return peer;
+    return true;
 }
 
-static void _z_tx_fixture_init(_z_tx_fixture_t *fixture) {
+static bool _z_tx_fixture_init(_z_tx_fixture_t *fixture) {
     memset(fixture, 0, sizeof(*fixture));
 
     _z_transport_unicast_establish_param_t param;
@@ -100,11 +126,12 @@ static void _z_tx_fixture_init(_z_tx_fixture_t *fixture) {
     param._lease = Z_TRANSPORT_LEASE;
 
     _z_tx_fake_link_init(&fixture->link, &fixture->default_link);
-    assert(_z_unicast_transport_create(&fixture->session._tp, &fixture->link, &param) == _Z_RES_OK);
+    Z_TX_CHECK(_z_unicast_transport_create(&fixture->session._tp, &fixture->link, &param) == _Z_RES_OK);
     fixture->session._mode = Z_WHATAMI_PEER;
 
-    _z_tx_fixture_add_peer(fixture, 0);
-    _z_tx_fixture_add_peer(fixture, 1);
+    Z_TX_CHECK(_z_tx_fixture_add_peer(fixture, 0));
+    Z_TX_CHECK(_z_tx_fixture_add_peer(fixture, 1));
+    return true;
 }
 
 static void _z_tx_fixture_clear(_z_tx_fixture_t *fixture) {
@@ -112,77 +139,215 @@ static void _z_tx_fixture_clear(_z_tx_fixture_t *fixture) {
     _z_transport_clear(&fixture->session._tp);
 }
 
-static void directed_send_reaches_only_selected_peer(void) {
+static bool directed_send_reaches_only_selected_peer(void) {
     _z_tx_fixture_t fixture;
-    _z_tx_fixture_init(&fixture);
+    Z_TX_CHECK(_z_tx_fixture_init(&fixture));
 
     _z_network_message_t msg = _z_tx_test_message();
-    assert(_z_send_n_msg(&fixture.session, &msg, Z_RELIABILITY_RELIABLE, Z_CONGESTION_CONTROL_BLOCK, fixture.peer[0]) ==
-           _Z_RES_OK);
+    Z_TX_CHECK(_z_send_n_msg(&fixture.session, &msg, Z_RELIABILITY_RELIABLE, Z_CONGESTION_CONTROL_BLOCK,
+                             fixture.peer[0]) == _Z_RES_OK);
 
-    assert(fixture.peer_state[0].write_count == 1);
-    assert(fixture.peer_state[1].write_count == 0);
-    assert(fixture.default_link.write_count == 0);
+    Z_TX_CHECK(fixture.peer_state[0].write_count == 1);
+    Z_TX_CHECK(fixture.peer_state[1].write_count == 0);
+    Z_TX_CHECK(fixture.default_link.write_count == 0);
 
     _z_tx_fixture_clear(&fixture);
+    return true;
+}
+
+static bool stream_send_retries_partial_writes(void) {
+    uint8_t data[10] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    uint8_t captured[sizeof(data)] = {0};
+    _z_tx_fake_write_state_t state = {0};
+    _z_link_t link;
+    _z_tx_fake_link_init(&link, &state);
+    link._cap._flow = Z_LINK_CAP_FLOW_STREAM;
+    state.max_write = 3;
+    state.capture = captured;
+    state.capture_capacity = sizeof(captured);
+
+    _z_wbuf_t wbuf;
+    Z_TX_CHECK(_z_wbuf_init(&wbuf, sizeof(data), false) == _Z_RES_OK);
+    Z_TX_CHECK(_z_wbuf_write_bytes(&wbuf, data, 0, sizeof(data)) == _Z_RES_OK);
+
+    Z_TX_CHECK(_z_link_send_wbuf(&link, &wbuf) == _Z_RES_OK);
+    Z_TX_CHECK(state.write_count == 4);
+    Z_TX_CHECK(state.byte_count == sizeof(data));
+    Z_TX_CHECK(memcmp(captured, data, sizeof(data)) == 0);
+
+    _z_wbuf_clear(&wbuf);
+    return true;
+}
+
+static bool stream_peer_send_retries_partial_writes(void) {
+    uint8_t data[10] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    uint8_t captured[sizeof(data)] = {0};
+    _z_tx_fake_write_state_t link_state = {0};
+    _z_link_t link;
+    _z_tx_fake_link_init(&link, &link_state);
+    link._cap._flow = Z_LINK_CAP_FLOW_STREAM;
+
+    _z_tx_fake_write_state_t peer_state = {
+        .max_write = 3,
+        .capture = captured,
+        .capture_capacity = sizeof(captured),
+    };
+    _z_link_peer_t peer = _z_link_peer_null();
+    Z_TX_CHECK(_z_link_peer_init(&peer, &_z_tx_fake_peer_ops, &peer_state, NULL) == _Z_RES_OK);
+
+    _z_wbuf_t wbuf;
+    Z_TX_CHECK(_z_wbuf_init(&wbuf, sizeof(data), false) == _Z_RES_OK);
+    Z_TX_CHECK(_z_wbuf_write_bytes(&wbuf, data, 0, sizeof(data)) == _Z_RES_OK);
+
+    Z_TX_CHECK(_z_link_peer_send_wbuf(&link, &wbuf, &peer) == _Z_RES_OK);
+    Z_TX_CHECK(peer_state.write_count == 4);
+    Z_TX_CHECK(peer_state.byte_count == sizeof(data));
+    Z_TX_CHECK(memcmp(captured, data, sizeof(data)) == 0);
+
+    _z_wbuf_clear(&wbuf);
+    _z_link_peer_clear(&peer);
+    return true;
+}
+
+static bool stream_send_zero_progress_fails(void) {
+    _z_tx_fake_write_state_t state = {
+        .zero_write = true,
+    };
+    _z_link_t link;
+    _z_tx_fake_link_init(&link, &state);
+    link._cap._flow = Z_LINK_CAP_FLOW_STREAM;
+
+    uint8_t data[10] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    _z_wbuf_t wbuf;
+    Z_TX_CHECK(_z_wbuf_init(&wbuf, sizeof(data), false) == _Z_RES_OK);
+    Z_TX_CHECK(_z_wbuf_write_bytes(&wbuf, data, 0, sizeof(data)) == _Z_RES_OK);
+
+    Z_TX_CHECK(_z_link_send_wbuf(&link, &wbuf) == _Z_ERR_TRANSPORT_TX_FAILED);
+    Z_TX_CHECK(state.write_count == 1);
+    Z_TX_CHECK(state.byte_count == 0);
+
+    _z_wbuf_clear(&wbuf);
+    return true;
+}
+
+static bool stream_peer_send_zero_progress_fails(void) {
+    _z_tx_fake_write_state_t link_state = {0};
+    _z_link_t link;
+    _z_tx_fake_link_init(&link, &link_state);
+    link._cap._flow = Z_LINK_CAP_FLOW_STREAM;
+
+    _z_tx_fake_write_state_t peer_state = {
+        .zero_write = true,
+    };
+    _z_link_peer_t peer = _z_link_peer_null();
+    Z_TX_CHECK(_z_link_peer_init(&peer, &_z_tx_fake_peer_ops, &peer_state, NULL) == _Z_RES_OK);
+
+    uint8_t data[10] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    _z_wbuf_t wbuf;
+    Z_TX_CHECK(_z_wbuf_init(&wbuf, sizeof(data), false) == _Z_RES_OK);
+    Z_TX_CHECK(_z_wbuf_write_bytes(&wbuf, data, 0, sizeof(data)) == _Z_RES_OK);
+
+    Z_TX_CHECK(_z_link_peer_send_wbuf(&link, &wbuf, &peer) == _Z_ERR_TRANSPORT_TX_FAILED);
+    Z_TX_CHECK(peer_state.write_count == 1);
+    Z_TX_CHECK(peer_state.byte_count == 0);
+
+    _z_wbuf_clear(&wbuf);
+    _z_link_peer_clear(&peer);
+    return true;
+}
+
+static bool datagram_peer_send_rejects_partial_writes(void) {
+    uint8_t data[10] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    uint8_t captured[sizeof(data)] = {0};
+    _z_tx_fake_write_state_t link_state = {0};
+    _z_link_t link;
+    _z_tx_fake_link_init(&link, &link_state);
+
+    _z_tx_fake_write_state_t peer_state = {
+        .max_write = 3,
+        .capture = captured,
+        .capture_capacity = sizeof(captured),
+    };
+    _z_link_peer_t peer = _z_link_peer_null();
+    Z_TX_CHECK(_z_link_peer_init(&peer, &_z_tx_fake_peer_ops, &peer_state, NULL) == _Z_RES_OK);
+
+    _z_wbuf_t wbuf;
+    Z_TX_CHECK(_z_wbuf_init(&wbuf, sizeof(data), false) == _Z_RES_OK);
+    Z_TX_CHECK(_z_wbuf_write_bytes(&wbuf, data, 0, sizeof(data)) == _Z_RES_OK);
+
+    Z_TX_CHECK(_z_link_peer_send_wbuf(&link, &wbuf, &peer) == _Z_ERR_TRANSPORT_TX_FAILED);
+    Z_TX_CHECK(peer_state.write_count == 1);
+    Z_TX_CHECK(peer_state.byte_count == 3);
+    Z_TX_CHECK(memcmp(captured, data, peer_state.byte_count) == 0);
+
+    _z_wbuf_clear(&wbuf);
+    _z_link_peer_clear(&peer);
+    return true;
 }
 
 #if Z_FEATURE_BATCHING == 1
-static void directed_send_flushes_shared_batch_once(void) {
+static bool directed_send_flushes_shared_batch_once(void) {
     _z_tx_fixture_t fixture;
-    _z_tx_fixture_init(&fixture);
+    Z_TX_CHECK(_z_tx_fixture_init(&fixture));
 
-    assert(_z_transport_start_batching(&fixture.session._tp) == _Z_RES_OK);
+    Z_TX_CHECK(_z_transport_start_batching(&fixture.session._tp) == _Z_RES_OK);
 
     _z_network_message_t broadcast_msg = _z_tx_test_message();
-    assert(_z_send_n_msg(&fixture.session, &broadcast_msg, Z_RELIABILITY_RELIABLE, Z_CONGESTION_CONTROL_BLOCK, NULL) ==
-           _Z_RES_OK);
-    assert(fixture.peer_state[0].write_count == 0);
-    assert(fixture.peer_state[1].write_count == 0);
+    Z_TX_CHECK(_z_send_n_msg(&fixture.session, &broadcast_msg, Z_RELIABILITY_RELIABLE, Z_CONGESTION_CONTROL_BLOCK,
+                             NULL) == _Z_RES_OK);
+    Z_TX_CHECK(fixture.peer_state[0].write_count == 0);
+    Z_TX_CHECK(fixture.peer_state[1].write_count == 0);
 
     _z_network_message_t directed_msg = _z_tx_test_message();
-    assert(_z_send_n_msg(&fixture.session, &directed_msg, Z_RELIABILITY_RELIABLE, Z_CONGESTION_CONTROL_BLOCK,
-                         fixture.peer[0]) == _Z_RES_OK);
-    assert(fixture.peer_state[0].write_count == 2);
-    assert(fixture.peer_state[1].write_count == 1);
+    Z_TX_CHECK(_z_send_n_msg(&fixture.session, &directed_msg, Z_RELIABILITY_RELIABLE, Z_CONGESTION_CONTROL_BLOCK,
+                             fixture.peer[0]) == _Z_RES_OK);
+    Z_TX_CHECK(fixture.peer_state[0].write_count == 2);
+    Z_TX_CHECK(fixture.peer_state[1].write_count == 1);
 
-    assert(_z_send_n_batch(&fixture.session, Z_CONGESTION_CONTROL_BLOCK) == _Z_RES_OK);
-    assert(fixture.peer_state[0].write_count == 2);
-    assert(fixture.peer_state[1].write_count == 1);
-    assert(fixture.default_link.write_count == 0);
+    Z_TX_CHECK(_z_send_n_batch(&fixture.session, Z_CONGESTION_CONTROL_BLOCK) == _Z_RES_OK);
+    Z_TX_CHECK(fixture.peer_state[0].write_count == 2);
+    Z_TX_CHECK(fixture.peer_state[1].write_count == 1);
+    Z_TX_CHECK(fixture.default_link.write_count == 0);
 
-    assert(_z_transport_stop_batching(&fixture.session._tp) == _Z_RES_OK);
+    Z_TX_CHECK(_z_transport_stop_batching(&fixture.session._tp) == _Z_RES_OK);
     _z_tx_fixture_clear(&fixture);
+    return true;
 }
 
-static void broadcast_batching_reaches_all_peers(void) {
+static bool broadcast_batching_reaches_all_peers(void) {
     _z_tx_fixture_t fixture;
-    _z_tx_fixture_init(&fixture);
+    Z_TX_CHECK(_z_tx_fixture_init(&fixture));
 
-    assert(_z_transport_start_batching(&fixture.session._tp) == _Z_RES_OK);
+    Z_TX_CHECK(_z_transport_start_batching(&fixture.session._tp) == _Z_RES_OK);
 
     _z_network_message_t msg = _z_tx_test_message();
-    assert(_z_send_n_msg(&fixture.session, &msg, Z_RELIABILITY_RELIABLE, Z_CONGESTION_CONTROL_BLOCK, NULL) ==
-           _Z_RES_OK);
-    assert(fixture.peer_state[0].write_count == 0);
-    assert(fixture.peer_state[1].write_count == 0);
+    Z_TX_CHECK(_z_send_n_msg(&fixture.session, &msg, Z_RELIABILITY_RELIABLE, Z_CONGESTION_CONTROL_BLOCK, NULL) ==
+               _Z_RES_OK);
+    Z_TX_CHECK(fixture.peer_state[0].write_count == 0);
+    Z_TX_CHECK(fixture.peer_state[1].write_count == 0);
 
-    assert(_z_send_n_batch(&fixture.session, Z_CONGESTION_CONTROL_BLOCK) == _Z_RES_OK);
-    assert(fixture.peer_state[0].write_count == 1);
-    assert(fixture.peer_state[1].write_count == 1);
-    assert(fixture.default_link.write_count == 0);
+    Z_TX_CHECK(_z_send_n_batch(&fixture.session, Z_CONGESTION_CONTROL_BLOCK) == _Z_RES_OK);
+    Z_TX_CHECK(fixture.peer_state[0].write_count == 1);
+    Z_TX_CHECK(fixture.peer_state[1].write_count == 1);
+    Z_TX_CHECK(fixture.default_link.write_count == 0);
 
-    assert(_z_transport_stop_batching(&fixture.session._tp) == _Z_RES_OK);
+    Z_TX_CHECK(_z_transport_stop_batching(&fixture.session._tp) == _Z_RES_OK);
     _z_tx_fixture_clear(&fixture);
+    return true;
 }
 #endif  // Z_FEATURE_BATCHING == 1
 
 int main(void) {
-    directed_send_reaches_only_selected_peer();
+    if (!directed_send_reaches_only_selected_peer() || !stream_send_retries_partial_writes() ||
+        !stream_peer_send_retries_partial_writes() || !stream_send_zero_progress_fails() ||
+        !stream_peer_send_zero_progress_fails() || !datagram_peer_send_rejects_partial_writes()) {
+        return 1;
+    }
 
 #if Z_FEATURE_BATCHING == 1
-    directed_send_flushes_shared_batch_once();
-    broadcast_batching_reaches_all_peers();
+    if (!directed_send_flushes_shared_batch_once() || !broadcast_batching_reaches_all_peers()) {
+        return 1;
+    }
 #else
     printf("Skipping batching-specific TX destination tests (Z_FEATURE_BATCHING disabled)\n");
 #endif
