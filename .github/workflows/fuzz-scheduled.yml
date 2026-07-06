@@ -160,9 +160,22 @@ jobs:
             } >> "$profile_dir/summary.md"
           done
 
-          cat "$profile_dir/summary.md" >> "$GITHUB_STEP_SUMMARY"
+      - name: Publish GitHub summary
+        if: always()
+        run: |
+          profile_dir="build-fuzz/coverage/${{ steps.profile.outputs.name }}"
+          if [ -f "$profile_dir/summary.md" ]; then
+            cat "$profile_dir/summary.md" >> "$GITHUB_STEP_SUMMARY"
+          else
+            {
+              echo "# Scheduled Fuzz Coverage (${{ steps.profile.outputs.name }})"
+              echo
+              echo "Coverage summary was not generated."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Upload fuzz coverage artifacts
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: fuzz-coverage-${{ steps.profile.outputs.name }}
