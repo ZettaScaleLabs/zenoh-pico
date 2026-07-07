@@ -115,15 +115,16 @@ static z_result_t _z_transport_tx_send_wbuf(_z_transport_common_t *ztc, const _z
             _z_transport_peer_unicast_slist_t *curr_list = dest->_peers;
             while (curr_list != NULL) {
                 const _z_transport_peer_unicast_t *curr_peer = _z_transport_peer_unicast_slist_value(curr_list);
-                _ZP_UNUSED(_z_link_peer_send_wbuf(ztc->_link, &ztc->_wbuf, &curr_peer->_link_peer));
+                if (_z_link_peer_send_wbuf(ztc->_link, &ztc->_wbuf, &curr_peer->_link_peer) == _Z_RES_OK) {
+                    sent = true;
+                }
                 curr_list = _z_transport_peer_unicast_slist_next(curr_list);
             }
-            sent = true;
             break;
         }
         case _Z_TRANSPORT_TX_DEST_LINK_PEER:
             ret = _z_link_peer_send_wbuf(ztc->_link, &ztc->_wbuf, dest->_peer);
-            sent = true;
+            sent = (ret == _Z_RES_OK);
             break;
         default:
             _Z_ERROR_LOG(_Z_ERR_TRANSPORT_TX_FAILED);
