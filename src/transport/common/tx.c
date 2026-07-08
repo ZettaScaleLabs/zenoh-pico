@@ -25,6 +25,18 @@
 #include "zenoh-pico/utils/endianness.h"
 #include "zenoh-pico/utils/logging.h"
 
+// Variant holding an optional TX destination override. The NONE state represents
+// the default destination; alternatives are borrowed peer-list or link-peer pointers.
+typedef _z_transport_peer_unicast_slist_t *_z_transport_tx_dest_peer_list_ptr_t;
+typedef const _z_link_peer_t *_z_transport_tx_dest_link_peer_ptr_t;
+#define _ZP_VARIANT_TEMPLATE_NAME _z_transport_tx_dest
+#define _ZP_VARIANT_TEMPLATE_1_TYPE _z_transport_tx_dest_peer_list_ptr_t
+#define _ZP_VARIANT_TEMPLATE_1_NAME peer_list
+#define _ZP_VARIANT_TEMPLATE_2_TYPE _z_transport_tx_dest_link_peer_ptr_t
+#define _ZP_VARIANT_TEMPLATE_2_NAME link_peer
+#define _ZP_VARIANT_TEMPLATE_NO_MOVE_FN
+#include "zenoh-pico/collections/variant_template.h"
+
 #if defined(Z_TEST_HOOKS)
 #include "zenoh-pico/session/loopback.h"
 
@@ -61,58 +73,44 @@ static _z_zint_t _z_transport_tx_get_sn(_z_transport_common_t *ztc, z_reliabilit
     return sn;
 }
 
-typedef enum {
-    _Z_TRANSPORT_TX_DEST_DEFAULT,
-    _Z_TRANSPORT_TX_DEST_PEER_LIST,
-    _Z_TRANSPORT_TX_DEST_LINK_PEER,
-} _z_transport_tx_dest_kind_t;
-
-typedef struct {
-    _z_transport_tx_dest_kind_t _kind;
-    _z_transport_peer_unicast_slist_t *_peers;
-    const _z_link_peer_t *_peer;
-} _z_transport_tx_dest_t;
-
 /*
  * The shared TX buffer does not retain a destination. Buffered data belongs to the
  * transport's normal destination; a selected-peer send first flushes any pending
  * shared batch there, then sends its message directly without entering the shared batch.
  */
-static _z_transport_tx_dest_t _z_transport_tx_dest_default(void) {
-    _z_transport_tx_dest_t dest;
-    dest._kind = _Z_TRANSPORT_TX_DEST_DEFAULT;
-    dest._peers = NULL;
-    dest._peer = NULL;
-    return dest;
-}
+static _z_transport_tx_dest_t _z_transport_tx_dest_default(void) { return _z_transport_tx_dest_none(); }
 
 static _z_transport_tx_dest_t _z_transport_tx_dest_peer_list(_z_transport_peer_unicast_slist_t *peers) {
-    _z_transport_tx_dest_t dest;
-    dest._kind = _Z_TRANSPORT_TX_DEST_PEER_LIST;
-    dest._peers = peers;
-    dest._peer = NULL;
-    return dest;
+    return _z_transport_tx_dest_from_peer_list(&peers);
 }
 
 static _z_transport_tx_dest_t _z_transport_tx_dest_link_peer(const _z_link_peer_t *peer) {
-    _z_transport_tx_dest_t dest;
-    dest._kind = _Z_TRANSPORT_TX_DEST_LINK_PEER;
-    dest._peers = NULL;
-    dest._peer = peer;
-    return dest;
+    return _z_transport_tx_dest_from_link_peer(&peer);
+}
+
+static bool _z_transport_tx_dest_is_default(const _z_transport_tx_dest_t *dest) {
+    return _z_transport_tx_dest_is_none(dest);
+}
+
+static _z_transport_peer_unicast_slist_t *_z_transport_tx_dest_peer_list_value(const _z_transport_tx_dest_t *dest) {
+    return *_z_transport_tx_dest_const_get_peer_list(dest);
+}
+
+static const _z_link_peer_t *_z_transport_tx_dest_link_peer_value(const _z_transport_tx_dest_t *dest) {
+    return *_z_transport_tx_dest_const_get_link_peer(dest);
 }
 
 static z_result_t _z_transport_tx_send_wbuf(_z_transport_common_t *ztc, const _z_transport_tx_dest_t *dest) {
     z_result_t ret = _Z_RES_OK;
     bool sent = false;
 
-    switch (dest->_kind) {
-        case _Z_TRANSPORT_TX_DEST_DEFAULT:
+    switch (_z_transport_tx_dest_tag(dest)) {
+        case _z_transport_tx_dest_tag_none:
             ret = _z_link_send_wbuf(ztc->_link, &ztc->_wbuf);
             sent = (ret == _Z_RES_OK);
             break;
-        case _Z_TRANSPORT_TX_DEST_PEER_LIST: {
-            _z_transport_peer_unicast_slist_t *curr_list = dest->_peers;
+        case _z_transport_tx_dest_tag_peer_list: {
+            _z_transport_peer_unicast_slist_t *curr_list = _z_transport_tx_dest_peer_list_value(dest);
             while (curr_list != NULL) {
                 const _z_transport_peer_unicast_t *curr_peer = _z_transport_peer_unicast_slist_value(curr_list);
                 if (_z_link_peer_send_wbuf(ztc->_link, &ztc->_wbuf, &curr_peer->_link_peer) == _Z_RES_OK) {
@@ -122,8 +120,8 @@ static z_result_t _z_transport_tx_send_wbuf(_z_transport_common_t *ztc, const _z
             }
             break;
         }
-        case _Z_TRANSPORT_TX_DEST_LINK_PEER:
-            ret = _z_link_peer_send_wbuf(ztc->_link, &ztc->_wbuf, dest->_peer);
+        case _z_transport_tx_dest_tag_link_peer:
+            ret = _z_link_peer_send_wbuf(ztc->_link, &ztc->_wbuf, _z_transport_tx_dest_link_peer_value(dest));
             sent = (ret == _Z_RES_OK);
             break;
         default:
@@ -164,7 +162,7 @@ static z_result_t _z_transport_tx_send_fragment_inner(_z_transport_common_t *ztc
         __unsafe_z_finalize_wbuf(&ztc->_wbuf, ztc->_link->_cap._flow);
         z_result_t send_ret = _z_transport_tx_send_wbuf(ztc, dest);
         if (send_ret != _Z_RES_OK) {
-            if (dest->_kind == _Z_TRANSPORT_TX_DEST_DEFAULT) {
+            if (_z_transport_tx_dest_is_default(dest)) {
                 return send_ret;
             }
             if (ret == _Z_RES_OK) {
@@ -215,7 +213,7 @@ static inline bool _z_transport_tx_batch_has_data(_z_transport_common_t *ztc) {
 static z_result_t _z_transport_tx_flush_buffer(_z_transport_common_t *ztc, const _z_transport_tx_dest_t *dest) {
     __unsafe_z_finalize_wbuf(&ztc->_wbuf, ztc->_link->_cap._flow);
     z_result_t ret = _z_transport_tx_send_wbuf(ztc, dest);
-    if ((ret != _Z_RES_OK) && (dest->_kind == _Z_TRANSPORT_TX_DEST_DEFAULT)) {
+    if ((ret != _Z_RES_OK) && _z_transport_tx_dest_is_default(dest)) {
         return ret;
     }
 #if Z_FEATURE_BATCHING == 1
