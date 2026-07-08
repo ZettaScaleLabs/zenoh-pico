@@ -136,21 +136,21 @@ typedef struct _z_link_peer_impl_t {
 } _z_link_peer_impl_t;
 
 void _z_link_peer_impl_clear(_z_link_peer_impl_t *impl);
-_Z_REFCOUNT_DEFINE(_z_link_peer_impl, _z_link_peer_impl)
+_Z_SIMPLE_REFCOUNT_DEFINE(_z_link_peer_impl, _z_link_peer_impl)
 
 /*
- * _z_link_peer_t is a ref-counted handle to driver-owned per-peer state.
+ * _z_link_peer_t is a strong ref-counted handle to opaque driver-owned per-peer state.
  * _z_link_peer_clone() retains that state, _z_link_peer_move() transfers the handle,
  * _z_link_peer_close() performs the I/O close, and _z_link_peer_clear() releases a
  * reference. The driver drop callback runs on the final release.
  */
 typedef struct _z_link_peer_t {
-    _z_link_peer_impl_rc_t _impl;
+    _z_link_peer_impl_simple_rc_t _impl;
 } _z_link_peer_t;
 
 static inline _z_link_peer_t _z_link_peer_null(void) {
     _z_link_peer_t peer;
-    peer._impl = _z_link_peer_impl_rc_null();
+    peer._impl = _z_link_peer_impl_simple_rc_null();
     return peer;
 }
 

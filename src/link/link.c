@@ -183,9 +183,21 @@ void _z_link_peer_impl_clear(_z_link_peer_impl_t *impl) {
     *impl = (_z_link_peer_impl_t){0};
 }
 
-bool _z_link_peer_check(const _z_link_peer_t *peer) {
-    return (peer != NULL) && (peer->_impl._cnt != NULL) && (peer->_impl._val != NULL);
+static _z_link_peer_impl_t *_z_link_peer_impl(_z_link_peer_t *peer) {
+    if ((peer == NULL) || _z_link_peer_impl_simple_rc_is_null(&peer->_impl)) {
+        return NULL;
+    }
+    return _z_link_peer_impl_simple_rc_value(&peer->_impl);
 }
+
+static const _z_link_peer_impl_t *_z_link_peer_impl_const(const _z_link_peer_t *peer) {
+    if ((peer == NULL) || _z_link_peer_impl_simple_rc_is_null(&peer->_impl)) {
+        return NULL;
+    }
+    return _z_link_peer_impl_simple_rc_value(&peer->_impl);
+}
+
+bool _z_link_peer_check(const _z_link_peer_t *peer) { return _z_link_peer_impl_const(peer) != NULL; }
 
 z_result_t _z_link_peer_init(_z_link_peer_t *peer, const _z_link_peer_ops_t *ops, void *state,
                              _z_link_peer_drop_f drop_f) {
@@ -198,8 +210,8 @@ z_result_t _z_link_peer_init(_z_link_peer_t *peer, const _z_link_peer_ops_t *ops
         ._state = state,
         ._drop_f = drop_f,
     };
-    _z_link_peer_impl_rc_t rc = _z_link_peer_impl_rc_new_from_val(&impl);
-    if (rc._cnt == NULL) {
+    _z_link_peer_impl_simple_rc_t rc = _z_link_peer_impl_simple_rc_new_from_val(&impl);
+    if (_z_link_peer_impl_simple_rc_is_null(&rc)) {
         _Z_ERROR_RETURN(_Z_ERR_SYSTEM_OUT_OF_MEMORY);
     }
     *peer = (_z_link_peer_t){._impl = rc};
@@ -209,31 +221,37 @@ z_result_t _z_link_peer_init(_z_link_peer_t *peer, const _z_link_peer_ops_t *ops
 _z_link_peer_t _z_link_peer_clone(const _z_link_peer_t *peer) {
     _z_link_peer_t clone = _z_link_peer_null();
     if (_z_link_peer_check(peer)) {
-        clone._impl = _z_link_peer_impl_rc_clone(&peer->_impl);
+        clone._impl = _z_link_peer_impl_simple_rc_clone(&peer->_impl);
     }
     return clone;
 }
 
-void *_z_link_peer_state(_z_link_peer_t *peer) { return _z_link_peer_check(peer) ? peer->_impl._val->_state : NULL; }
+void *_z_link_peer_state(_z_link_peer_t *peer) {
+    _z_link_peer_impl_t *impl = _z_link_peer_impl(peer);
+    return impl != NULL ? impl->_state : NULL;
+}
 
 const void *_z_link_peer_state_const(const _z_link_peer_t *peer) {
-    return _z_link_peer_check(peer) ? peer->_impl._val->_state : NULL;
+    const _z_link_peer_impl_t *impl = _z_link_peer_impl_const(peer);
+    return impl != NULL ? impl->_state : NULL;
 }
 
 void _z_link_peer_close(_z_link_peer_t *peer) {
-    if (_z_link_peer_check(peer) && (peer->_impl._val->_ops != NULL) && (peer->_impl._val->_ops->_close_f != NULL)) {
-        peer->_impl._val->_ops->_close_f(peer);
+    const _z_link_peer_impl_t *impl = _z_link_peer_impl_const(peer);
+    if ((impl != NULL) && (impl->_ops != NULL) && (impl->_ops->_close_f != NULL)) {
+        impl->_ops->_close_f(peer);
     }
 }
 
 void _z_link_peer_clear(_z_link_peer_t *peer) {
     if (peer != NULL) {
-        _z_link_peer_impl_rc_drop(&peer->_impl);
+        _z_link_peer_impl_simple_rc_drop(&peer->_impl);
     }
 }
 
 size_t _z_link_peer_read(const _z_link_t *link, const _z_link_peer_t *peer, uint8_t *ptr, size_t len) {
-    const _z_link_peer_ops_t *ops = _z_link_peer_check(peer) ? peer->_impl._val->_ops : NULL;
+    const _z_link_peer_impl_t *impl = _z_link_peer_impl_const(peer);
+    const _z_link_peer_ops_t *ops = impl != NULL ? impl->_ops : NULL;
     if ((ops == NULL) || (ops->_read_f == NULL)) {
         return SIZE_MAX;
     }
@@ -241,7 +259,8 @@ size_t _z_link_peer_read(const _z_link_t *link, const _z_link_peer_t *peer, uint
 }
 
 size_t _z_link_peer_write(const _z_link_t *link, const _z_link_peer_t *peer, const uint8_t *ptr, size_t len) {
-    const _z_link_peer_ops_t *ops = _z_link_peer_check(peer) ? peer->_impl._val->_ops : NULL;
+    const _z_link_peer_impl_t *impl = _z_link_peer_impl_const(peer);
+    const _z_link_peer_ops_t *ops = impl != NULL ? impl->_ops : NULL;
     if ((ops == NULL) || (ops->_write_f == NULL)) {
         return SIZE_MAX;
     }
@@ -249,7 +268,8 @@ size_t _z_link_peer_write(const _z_link_t *link, const _z_link_peer_t *peer, con
 }
 
 z_result_t _z_link_peer_set_blocking(const _z_link_peer_t *peer, bool blocking) {
-    const _z_link_peer_ops_t *ops = _z_link_peer_check(peer) ? peer->_impl._val->_ops : NULL;
+    const _z_link_peer_impl_t *impl = _z_link_peer_impl_const(peer);
+    const _z_link_peer_ops_t *ops = impl != NULL ? impl->_ops : NULL;
     if ((ops == NULL) || (ops->_set_blocking_f == NULL)) {
         _Z_ERROR_RETURN(_Z_ERR_INVALID);
     }
@@ -258,7 +278,8 @@ z_result_t _z_link_peer_set_blocking(const _z_link_peer_t *peer, bool blocking) 
 
 z_result_t _z_link_peer_get_endpoints(const _z_link_peer_t *peer, char *local, size_t local_len, char *remote,
                                       size_t remote_len) {
-    const _z_link_peer_ops_t *ops = _z_link_peer_check(peer) ? peer->_impl._val->_ops : NULL;
+    const _z_link_peer_impl_t *impl = _z_link_peer_impl_const(peer);
+    const _z_link_peer_ops_t *ops = impl != NULL ? impl->_ops : NULL;
     if ((ops == NULL) || (ops->_get_endpoints_f == NULL)) {
         _Z_ERROR_RETURN(_Z_ERR_INVALID);
     }
