@@ -127,8 +127,8 @@ static z_result_t _z_transport_tx_send_wbuf(_z_transport_common_t *ztc, const _z
             sent = (ret == _Z_RES_OK);
             break;
         default:
-            _Z_ERROR_LOG(_Z_ERR_TRANSPORT_TX_FAILED);
-            ret = _Z_ERR_TRANSPORT_TX_FAILED;
+            _Z_ERROR_LOG(_Z_ERR_INVALID);
+            ret = _Z_ERR_INVALID;
             break;
     }
 
