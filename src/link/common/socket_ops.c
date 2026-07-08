@@ -23,7 +23,6 @@
 typedef struct _z_link_socket_peer_state_t {
     _z_sys_net_socket_t _socket;
     _z_link_socket_close_f _close_f;
-    bool _closed;
 } _z_link_socket_peer_state_t;
 
 static _z_link_socket_peer_state_t *_z_link_peer_socket_state(_z_link_peer_t *peer) {
@@ -49,7 +48,7 @@ static void _z_link_socket_peer_state_drop(void *arg) {
     if (state == NULL) {
         return;
     }
-    if (!state->_closed && (state->_close_f != NULL)) {
+    if (state->_close_f != NULL) {
         state->_close_f(&state->_socket);
     }
     z_free(state);
@@ -68,7 +67,6 @@ z_result_t _z_link_socket_peer_from_socket(_z_link_peer_t *peer, _z_sys_net_sock
     *state = (_z_link_socket_peer_state_t){
         ._socket = socket,
         ._close_f = close_f,
-        ._closed = false,
     };
 
     _Z_CLEAN_RETURN_IF_ERR(_z_link_peer_init(peer, ops, state, _z_link_socket_peer_state_drop), z_free(state));
@@ -127,9 +125,10 @@ z_result_t _z_link_socket_peer_get_endpoints(const _z_link_peer_t *peer, char *l
 
 void _z_link_socket_peer_close(_z_link_peer_t *peer) {
     _z_link_socket_peer_state_t *state = _z_link_peer_socket_state(peer);
-    if ((state == NULL) || state->_closed || (state->_close_f == NULL)) {
+    if ((state == NULL) || (state->_close_f == NULL)) {
         return;
     }
-    state->_close_f(&state->_socket);
-    state->_closed = true;
+    _z_link_socket_close_f close_f = state->_close_f;
+    state->_close_f = NULL;
+    close_f(&state->_socket);
 }
