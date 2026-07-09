@@ -133,6 +133,17 @@ static inline void _z_link_peer_iter_set_ready(_z_link_peer_iter_t *iter, bool r
  *   cases; callers interpret SIZE_MAX according to the surrounding transport
  *   state.
  *
+ * The `link` and `peer` arguments identify different parts of the operation:
+ *
+ * - `peer` is the concrete peer instance being operated on. It may be the
+ *   link-owned default peer, or an accepted/opened peer owned by the transport.
+ * - `link` provides shared link-level context such as capabilities,
+ *   endpoint/configuration data, and driver-owned link state. Implementations
+ *   that only need peer-local state may ignore it.
+ *
+ * The link-owned peer is only the default peer; it must not be assumed to be
+ * the same peer passed to `_read_f` or `_write_f`.
+ *
  * Fields:
  *     _read_f: Read up to len bytes from the peer into ptr.
  *     _write_f: Write up to len bytes from ptr to the peer.
