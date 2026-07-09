@@ -163,7 +163,7 @@ static z_result_t _z_transport_tx_send_fragment_inner(_z_transport_common_t *ztc
         __unsafe_z_finalize_wbuf(&ztc->_wbuf, ztc->_link->_cap._flow);
         z_result_t send_ret = _z_transport_tx_send_wbuf(ztc, dest);
         if (send_ret != _Z_RES_OK) {
-            if (_z_transport_tx_dest_is_default(dest)) {
+            if (!_z_transport_tx_dest_is_peer_list(dest)) {
                 return send_ret;
             }
             if (ret == _Z_RES_OK) {
