@@ -118,6 +118,27 @@ static inline void _z_link_peer_iter_set_ready(_z_link_peer_iter_t *iter, bool r
     iter->_set_ready_f(iter, ready);
 }
 
+/**
+ * Link peer operation callbacks.
+ *
+ * Peer I/O callbacks use a size_t byte-count convention:
+ *
+ * - A return value > 0 is the number of bytes transferred.
+ * - 0 means that no bytes were transferred. Depending on the operation and
+ *   transport state, callers may treat this as no progress, peer closure, or
+ *   an incomplete transfer.
+ * - SIZE_MAX is the sentinel for an error or no-data condition. The callback
+ *   contract does not distinguish fatal errors from non-blocking "would block"
+ *   cases; callers interpret SIZE_MAX according to the surrounding transport
+ *   state.
+ *
+ * Fields:
+ *     _read_f: Read up to len bytes from the peer into ptr.
+ *     _write_f: Write up to len bytes from ptr to the peer.
+ *     _set_blocking_f: Enable or disable blocking mode for the peer.
+ *     _get_endpoints_f: Write the local and remote endpoint strings for the peer.
+ *     _close_f: Close the peer.
+ */
 typedef struct _z_link_peer_ops_t {
     size_t (*_read_f)(const struct _z_link_t *link, const struct _z_link_peer_t *peer, uint8_t *ptr, size_t len);
     size_t (*_write_f)(const struct _z_link_t *link, const struct _z_link_peer_t *peer, const uint8_t *ptr, size_t len);
