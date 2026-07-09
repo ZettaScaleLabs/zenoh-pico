@@ -25,10 +25,9 @@
 #if Z_FEATURE_LINK_TCP == 1
 
 typedef struct {
+    _z_link_t _base;
     _z_tcp_socket_t _tcp;
-} _z_tcp_link_state_t;
-
-static _z_tcp_link_state_t *_z_tcp_link_state(_z_link_t *link) { return (_z_tcp_link_state_t *)_z_link_state(link); }
+} _z_tcp_link_t;
 
 static size_t _z_link_peer_read_tcp(const _z_link_t *link, const _z_link_peer_t *peer, uint8_t *ptr, size_t len);
 static size_t _z_link_peer_write_tcp(const _z_link_t *link, const _z_link_peer_t *peer, const uint8_t *ptr, size_t len);
@@ -51,8 +50,8 @@ z_result_t _z_endpoint_tcp_valid(_z_endpoint_t *endpoint) {
 }
 
 z_result_t _z_f_link_open_tcp(_z_link_t *zl) {
-    _z_tcp_link_state_t *state = _z_tcp_link_state(zl);
-    if (state == NULL) {
+    _z_tcp_link_t *link = (_z_tcp_link_t *)zl;
+    if (link == NULL) {
         _Z_ERROR_RETURN(_Z_ERR_INVALID);
     }
 
@@ -62,33 +61,32 @@ z_result_t _z_f_link_open_tcp(_z_link_t *zl) {
         tout = (uint32_t)strtoul(tout_as_str, NULL, 10);
     }
 
-    _Z_RETURN_IF_ERR(_z_tcp_open(&state->_tcp._sock, state->_tcp._rep, tout));
+    _Z_RETURN_IF_ERR(_z_tcp_open(&link->_tcp._sock, link->_tcp._rep, tout));
     _Z_CLEAN_RETURN_IF_ERR(
-        _z_link_socket_peer_from_socket(&zl->_peer, state->_tcp._sock, _z_tcp_close, &_z_tcp_peer_ops),
-        _z_tcp_close(&state->_tcp._sock));
+        _z_link_socket_peer_from_socket(&zl->_peer, link->_tcp._sock, _z_tcp_close, &_z_tcp_peer_ops),
+        _z_tcp_close(&link->_tcp._sock));
     return _Z_RES_OK;
 }
 
 z_result_t _z_f_link_listen_tcp(_z_link_t *zl) {
-    _z_tcp_link_state_t *state = _z_tcp_link_state(zl);
-    if (state == NULL) {
+    _z_tcp_link_t *link = (_z_tcp_link_t *)zl;
+    if (link == NULL) {
         _Z_ERROR_RETURN(_Z_ERR_INVALID);
     }
 
-    _Z_RETURN_IF_ERR(_z_tcp_listen(&state->_tcp._sock, state->_tcp._rep));
+    _Z_RETURN_IF_ERR(_z_tcp_listen(&link->_tcp._sock, link->_tcp._rep));
     _Z_CLEAN_RETURN_IF_ERR(
-        _z_link_socket_peer_from_socket(&zl->_peer, state->_tcp._sock, _z_tcp_close, &_z_tcp_peer_ops),
-        _z_tcp_close(&state->_tcp._sock));
+        _z_link_socket_peer_from_socket(&zl->_peer, link->_tcp._sock, _z_tcp_close, &_z_tcp_peer_ops),
+        _z_tcp_close(&link->_tcp._sock));
     return _Z_RES_OK;
 }
 
 void _z_f_link_close_tcp(_z_link_t *zl) { _z_link_peer_close(&zl->_peer); }
 
-static void _z_tcp_link_state_drop(void *arg) {
-    _z_tcp_link_state_t *state = (_z_tcp_link_state_t *)arg;
-    if (state != NULL) {
-        _z_tcp_endpoint_clear(&state->_tcp._rep);
-        z_free(state);
+static void _z_tcp_link_drop(_z_link_t *zl) {
+    _z_tcp_link_t *link = (_z_tcp_link_t *)zl;
+    if (link != NULL) {
+        _z_tcp_endpoint_clear(&link->_tcp._rep);
     }
 }
 
@@ -190,41 +188,51 @@ static z_result_t _z_f_link_accept_tcp(const _z_link_t *link, _z_link_peer_t *pe
     return _Z_RES_OK;
 }
 
-z_result_t _z_new_link_tcp(_z_link_t *zl, _z_endpoint_t *endpoint) {
-    _z_tcp_link_state_t *state = (_z_tcp_link_state_t *)z_malloc(sizeof(_z_tcp_link_state_t));
-    if (state == NULL) {
+z_result_t _z_new_link_tcp(_z_link_t **zl, _z_endpoint_t *endpoint) {
+    if (zl == NULL) {
+        _Z_ERROR_RETURN(_Z_ERR_INVALID);
+    }
+    *zl = NULL;
+
+    _z_tcp_link_t *link = (_z_tcp_link_t *)z_malloc(sizeof(_z_tcp_link_t));
+    if (link == NULL) {
         _Z_ERROR_RETURN(_Z_ERR_SYSTEM_OUT_OF_MEMORY);
     }
-    memset(state, 0, sizeof(_z_tcp_link_state_t));
+    memset(link, 0, sizeof(_z_tcp_link_t));
 
-    _Z_CLEAN_RETURN_IF_ERR(_z_tcp_endpoint_init_from_address(&state->_tcp._rep, &endpoint->_locator._address),
-                           z_free(state));
+    _z_link_t *base = &link->_base;
+    base->_drop_f = _z_tcp_link_drop;
+    z_result_t ret = _z_tcp_endpoint_init_from_address(&link->_tcp._rep, &endpoint->_locator._address);
+    if (ret != _Z_RES_OK) {
+        z_free(link);
+        return ret;
+    }
+    base->_endpoint = *endpoint;
+    *endpoint = (_z_endpoint_t){0};
 
-    zl->_state = state;
-    zl->_state_drop_f = _z_tcp_link_state_drop;
-    zl->_cap._transport = Z_LINK_CAP_TRANSPORT_UNICAST;
-    zl->_cap._flow = Z_LINK_CAP_FLOW_STREAM;
-    zl->_cap._is_reliable = true;
+    base->_cap._transport = Z_LINK_CAP_TRANSPORT_UNICAST;
+    base->_cap._flow = Z_LINK_CAP_FLOW_STREAM;
+    base->_cap._is_reliable = true;
 
-    zl->_mtu = _z_get_link_mtu_tcp();
+    base->_mtu = _z_get_link_mtu_tcp();
 
-    zl->_endpoint = *endpoint;
+    base->_close_f = _z_f_link_close_tcp;
 
-    zl->_close_f = _z_f_link_close_tcp;
+    base->_write_f = _z_f_link_write_tcp;
+    base->_write_all_f = _z_f_link_write_all_tcp;
+    base->_read_f = _z_f_link_read_tcp;
+    base->_read_exact_f = _z_f_link_read_exact_tcp;
+    base->_wait_peers_readable_f = _z_link_socket_wait_peers_readable;
+    base->_open_peer_f = _z_f_link_open_peer_tcp;
+    base->_peer_from_link_f = _z_link_peer_from_default;
+    base->_accept_peer_f = _z_f_link_accept_tcp;
 
-    zl->_write_f = _z_f_link_write_tcp;
-    zl->_write_all_f = _z_f_link_write_all_tcp;
-    zl->_read_f = _z_f_link_read_tcp;
-    zl->_read_exact_f = _z_f_link_read_exact_tcp;
-    zl->_wait_peers_readable_f = _z_link_socket_wait_peers_readable;
-    zl->_open_peer_f = _z_f_link_open_peer_tcp;
-    zl->_peer_from_link_f = _z_link_peer_from_default;
-    zl->_accept_peer_f = _z_f_link_accept_tcp;
+    *zl = base;
 
     return _Z_RES_OK;
 }
 
-static z_result_t _z_link_driver_tcp_create(_z_link_t *link, _z_endpoint_t *endpoint, const _z_config_t *session_cfg) {
+static z_result_t _z_link_driver_tcp_create(_z_link_t **link, _z_endpoint_t *endpoint, const _z_config_t *session_cfg) {
     _ZP_UNUSED(session_cfg);
     return _z_new_link_tcp(link, endpoint);
 }
@@ -247,7 +255,7 @@ z_result_t _z_new_peer_tcp(_z_endpoint_t *endpoint, _z_sys_net_socket_t *socket)
     _Z_ERROR_RETURN(_Z_ERR_TRANSPORT_NOT_AVAILABLE);
 }
 
-z_result_t _z_new_link_tcp(_z_link_t *zl, _z_endpoint_t *endpoint) {
+z_result_t _z_new_link_tcp(_z_link_t **zl, _z_endpoint_t *endpoint) {
     _ZP_UNUSED(zl);
     _ZP_UNUSED(endpoint);
     _Z_ERROR_RETURN(_Z_ERR_TRANSPORT_NOT_AVAILABLE);

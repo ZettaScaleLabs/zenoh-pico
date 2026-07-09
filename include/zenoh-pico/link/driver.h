@@ -22,7 +22,21 @@ extern "C" {
 #endif
 
 typedef z_result_t (*_z_link_driver_validate_f)(_z_endpoint_t *endpoint);
-typedef z_result_t (*_z_link_driver_create_f)(_z_link_t *link, _z_endpoint_t *endpoint, const _z_config_t *session_cfg);
+/*
+ * On success:
+ *   return _Z_RES_OK
+ *   *link is non-NULL
+ *   endpoint ownership is moved into the returned link
+ *
+ * On failure:
+ *   return non-OK
+ *   *link remains NULL
+ *   endpoint ownership remains with the caller
+ *
+ * Returning _Z_RES_OK with *link == NULL is a driver contract violation.
+ */
+typedef z_result_t (*_z_link_driver_create_f)(_z_link_t **link, _z_endpoint_t *endpoint,
+                                              const _z_config_t *session_cfg);
 typedef z_result_t (*_z_link_driver_activate_f)(_z_link_t *self);
 typedef _z_link_driver_activate_f _z_f_link_open;
 typedef _z_link_driver_activate_f _z_f_link_listen;

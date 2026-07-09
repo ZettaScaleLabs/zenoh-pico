@@ -27,14 +27,13 @@
 #if Z_FEATURE_LINK_WS == 1
 
 typedef struct {
+    _z_link_t _base;
     _z_ws_socket_t _ws;
-} _z_ws_link_state_t;
+} _z_ws_link_t;
 
-static _z_ws_link_state_t *_z_ws_link_state(_z_link_t *link) { return (_z_ws_link_state_t *)_z_link_state(link); }
+static _z_ws_link_t *_z_ws_link(_z_link_t *link) { return (_z_ws_link_t *)link; }
 
-static const _z_ws_link_state_t *_z_ws_link_state_const(const _z_link_t *link) {
-    return (const _z_ws_link_state_t *)_z_link_state_const(link);
-}
+static const _z_ws_link_t *_z_ws_link_const(const _z_link_t *link) { return (const _z_ws_link_t *)link; }
 
 static size_t _z_link_peer_read_ws(const _z_link_t *link, const _z_link_peer_t *peer, uint8_t *ptr, size_t len);
 static size_t _z_link_peer_write_ws(const _z_link_t *link, const _z_link_peer_t *peer, const uint8_t *ptr, size_t len);
@@ -59,8 +58,8 @@ z_result_t _z_endpoint_ws_valid(_z_endpoint_t *endpoint) {
 }
 
 z_result_t _z_f_link_open_ws(_z_link_t *zl) {
-    _z_ws_link_state_t *state = _z_ws_link_state(zl);
-    if (state == NULL) {
+    _z_ws_link_t *link = _z_ws_link(zl);
+    if (link == NULL) {
         _Z_ERROR_RETURN(_Z_ERR_INVALID);
     }
 
@@ -70,61 +69,60 @@ z_result_t _z_f_link_open_ws(_z_link_t *zl) {
         tout = (uint32_t)strtoul(tout_as_str, NULL, 10);
     }
 
-    _Z_RETURN_IF_ERR(_z_ws_transport_open(&state->_ws, tout));
+    _Z_RETURN_IF_ERR(_z_ws_transport_open(&link->_ws, tout));
     // WebSocket peer handles borrow the link-owned transport; only link teardown closes it.
-    _Z_CLEAN_RETURN_IF_ERR(_z_link_socket_peer_from_socket(&zl->_peer, state->_ws._sock, NULL, &_z_ws_peer_ops),
-                           _z_ws_transport_close(&state->_ws));
+    _Z_CLEAN_RETURN_IF_ERR(_z_link_socket_peer_from_socket(&zl->_peer, link->_ws._sock, NULL, &_z_ws_peer_ops),
+                           _z_ws_transport_close(&link->_ws));
     return _Z_RES_OK;
 }
 
 z_result_t _z_f_link_listen_ws(_z_link_t *zl) {
-    _z_ws_link_state_t *state = _z_ws_link_state(zl);
-    if (state == NULL) {
+    _z_ws_link_t *link = _z_ws_link(zl);
+    if (link == NULL) {
         _Z_ERROR_RETURN(_Z_ERR_INVALID);
     }
 
-    _Z_RETURN_IF_ERR(_z_ws_transport_listen(&state->_ws));
+    _Z_RETURN_IF_ERR(_z_ws_transport_listen(&link->_ws));
     // WebSocket peer handles borrow the link-owned transport; only link teardown closes it.
-    _Z_CLEAN_RETURN_IF_ERR(_z_link_socket_peer_from_socket(&zl->_peer, state->_ws._sock, NULL, &_z_ws_peer_ops),
-                           _z_ws_transport_close(&state->_ws));
+    _Z_CLEAN_RETURN_IF_ERR(_z_link_socket_peer_from_socket(&zl->_peer, link->_ws._sock, NULL, &_z_ws_peer_ops),
+                           _z_ws_transport_close(&link->_ws));
     return _Z_RES_OK;
 }
 
 void _z_f_link_close_ws(_z_link_t *zl) {
-    _z_ws_link_state_t *state = _z_ws_link_state(zl);
-    if (state != NULL) {
-        _z_ws_transport_close(&state->_ws);
+    _z_ws_link_t *link = _z_ws_link(zl);
+    if (link != NULL) {
+        _z_ws_transport_close(&link->_ws);
     }
 }
 
-static void _z_ws_link_state_drop(void *arg) {
-    _z_ws_link_state_t *state = (_z_ws_link_state_t *)arg;
-    if (state != NULL) {
-        _z_ws_endpoint_clear(&state->_ws._rep);
-        z_free(state);
+static void _z_ws_link_drop(_z_link_t *zl) {
+    _z_ws_link_t *link = _z_ws_link(zl);
+    if (link != NULL) {
+        _z_ws_endpoint_clear(&link->_ws._rep);
     }
 }
 
 size_t _z_f_link_write_ws(const _z_link_t *zl, const uint8_t *ptr, size_t len) {
-    const _z_ws_link_state_t *state = _z_ws_link_state_const(zl);
-    return state == NULL ? SIZE_MAX : _z_ws_transport_write(&state->_ws, ptr, len);
+    const _z_ws_link_t *link = _z_ws_link_const(zl);
+    return link == NULL ? SIZE_MAX : _z_ws_transport_write(&link->_ws, ptr, len);
 }
 
 size_t _z_f_link_write_all_ws(const _z_link_t *zl, const uint8_t *ptr, size_t len) {
-    const _z_ws_link_state_t *state = _z_ws_link_state_const(zl);
-    return state == NULL ? SIZE_MAX : _z_ws_transport_write(&state->_ws, ptr, len);
+    const _z_ws_link_t *link = _z_ws_link_const(zl);
+    return link == NULL ? SIZE_MAX : _z_ws_transport_write(&link->_ws, ptr, len);
 }
 
 size_t _z_f_link_read_ws(const _z_link_t *zl, uint8_t *ptr, size_t len, _z_slice_t *addr) {
     _ZP_UNUSED(addr);
-    const _z_ws_link_state_t *state = _z_ws_link_state_const(zl);
-    return state == NULL ? SIZE_MAX : _z_ws_transport_read(&state->_ws, ptr, len);
+    const _z_ws_link_t *link = _z_ws_link_const(zl);
+    return link == NULL ? SIZE_MAX : _z_ws_transport_read(&link->_ws, ptr, len);
 }
 
 size_t _z_f_link_read_exact_ws(const _z_link_t *zl, uint8_t *ptr, size_t len, _z_slice_t *addr) {
     _ZP_UNUSED(addr);
-    const _z_ws_link_state_t *state = _z_ws_link_state_const(zl);
-    return state == NULL ? SIZE_MAX : _z_ws_transport_read_exact(&state->_ws, ptr, len);
+    const _z_ws_link_t *link = _z_ws_link_const(zl);
+    return link == NULL ? SIZE_MAX : _z_ws_transport_read_exact(&link->_ws, ptr, len);
 }
 
 uint16_t _z_get_link_mtu_ws(void) {
@@ -140,42 +138,53 @@ static size_t _z_link_peer_read_ws(const _z_link_t *link, const _z_link_peer_t *
 
 static size_t _z_link_peer_write_ws(const _z_link_t *link, const _z_link_peer_t *peer, const uint8_t *ptr, size_t len) {
     _ZP_UNUSED(peer);
-    const _z_ws_link_state_t *state = _z_ws_link_state_const(link);
-    return state == NULL ? SIZE_MAX : _z_ws_transport_write(&state->_ws, ptr, len);
+    const _z_ws_link_t *ws_link = _z_ws_link_const(link);
+    return ws_link == NULL ? SIZE_MAX : _z_ws_transport_write(&ws_link->_ws, ptr, len);
 }
 
-z_result_t _z_new_link_ws(_z_link_t *zl, _z_endpoint_t *endpoint) {
-    _z_ws_link_state_t *state = (_z_ws_link_state_t *)z_malloc(sizeof(_z_ws_link_state_t));
-    if (state == NULL) {
+z_result_t _z_new_link_ws(_z_link_t **zl, _z_endpoint_t *endpoint) {
+    if (zl == NULL) {
+        _Z_ERROR_RETURN(_Z_ERR_INVALID);
+    }
+    *zl = NULL;
+
+    _z_ws_link_t *link = (_z_ws_link_t *)z_malloc(sizeof(_z_ws_link_t));
+    if (link == NULL) {
         _Z_ERROR_RETURN(_Z_ERR_SYSTEM_OUT_OF_MEMORY);
     }
-    memset(state, 0, sizeof(_z_ws_link_state_t));
+    memset(link, 0, sizeof(_z_ws_link_t));
 
-    _Z_CLEAN_RETURN_IF_ERR(_z_ws_endpoint_init(&state->_ws._rep, &endpoint->_locator._address), z_free(state));
+    _z_link_t *base = &link->_base;
+    base->_drop_f = _z_ws_link_drop;
+    z_result_t ret = _z_ws_endpoint_init(&link->_ws._rep, &endpoint->_locator._address);
+    if (ret != _Z_RES_OK) {
+        z_free(link);
+        return ret;
+    }
+    base->_endpoint = *endpoint;
+    *endpoint = (_z_endpoint_t){0};
 
-    zl->_state = state;
-    zl->_state_drop_f = _z_ws_link_state_drop;
-    zl->_cap._transport = Z_LINK_CAP_TRANSPORT_UNICAST;
-    zl->_cap._flow = Z_LINK_CAP_FLOW_DATAGRAM;
-    zl->_cap._is_reliable = true;
+    base->_cap._transport = Z_LINK_CAP_TRANSPORT_UNICAST;
+    base->_cap._flow = Z_LINK_CAP_FLOW_DATAGRAM;
+    base->_cap._is_reliable = true;
 
-    zl->_mtu = _z_get_link_mtu_ws();
+    base->_mtu = _z_get_link_mtu_ws();
 
-    zl->_endpoint = *endpoint;
+    base->_close_f = _z_f_link_close_ws;
 
-    zl->_close_f = _z_f_link_close_ws;
+    base->_write_f = _z_f_link_write_ws;
+    base->_write_all_f = _z_f_link_write_all_ws;
+    base->_read_f = _z_f_link_read_ws;
+    base->_read_exact_f = _z_f_link_read_exact_ws;
+    base->_wait_peers_readable_f = _z_link_socket_wait_peers_readable;
+    base->_peer_from_link_f = _z_link_peer_from_default;
 
-    zl->_write_f = _z_f_link_write_ws;
-    zl->_write_all_f = _z_f_link_write_all_ws;
-    zl->_read_f = _z_f_link_read_ws;
-    zl->_read_exact_f = _z_f_link_read_exact_ws;
-    zl->_wait_peers_readable_f = _z_link_socket_wait_peers_readable;
-    zl->_peer_from_link_f = _z_link_peer_from_default;
+    *zl = base;
 
     return _Z_RES_OK;
 }
 
-static z_result_t _z_link_driver_ws_create(_z_link_t *link, _z_endpoint_t *endpoint, const _z_config_t *session_cfg) {
+static z_result_t _z_link_driver_ws_create(_z_link_t **link, _z_endpoint_t *endpoint, const _z_config_t *session_cfg) {
     _ZP_UNUSED(session_cfg);
     return _z_new_link_ws(link, endpoint);
 }

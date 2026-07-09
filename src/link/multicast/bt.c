@@ -27,15 +27,14 @@
 #define SPP_MAXIMUM_PAYLOAD 128
 
 typedef struct {
+    _z_link_t _base;
     _z_bt_socket_t _bt;
     size_t _gname_len;
-} _z_bt_link_state_t;
+} _z_bt_link_t;
 
-static _z_bt_link_state_t *_z_bt_link_state(_z_link_t *link) { return (_z_bt_link_state_t *)_z_link_state(link); }
+static _z_bt_link_t *_z_bt_link(_z_link_t *link) { return (_z_bt_link_t *)link; }
 
-static const _z_bt_link_state_t *_z_bt_link_state_const(const _z_link_t *link) {
-    return (const _z_bt_link_state_t *)_z_link_state_const(link);
-}
+static const _z_bt_link_t *_z_bt_link_const(const _z_link_t *link) { return (const _z_bt_link_t *)link; }
 
 z_result_t _z_endpoint_bt_valid(_z_endpoint_t *ep) {
     _z_string_t bt_str = _z_string_alias_str(BT_SCHEMA);
@@ -59,24 +58,24 @@ static char *__z_convert_address_bt(_z_string_t *address, size_t *len) {
     return ret;
 }
 
-static bool _z_bt_copy_remote_addr(const _z_bt_link_state_t *state, _z_slice_t *addr) {
+static bool _z_bt_copy_remote_addr(const _z_bt_link_t *link, _z_slice_t *addr) {
     if (addr == NULL) {
         return true;
     }
-    if (state->_bt._gname == NULL) {
+    if (link->_bt._gname == NULL) {
         return false;
     }
     size_t offset = 0;
-    if (!_z_memcpy_checked((uint8_t *)addr->start, addr->len, &offset, state->_bt._gname, state->_gname_len)) {
+    if (!_z_memcpy_checked((uint8_t *)addr->start, addr->len, &offset, link->_bt._gname, link->_gname_len)) {
         return false;
     }
-    addr->len = state->_gname_len;
+    addr->len = link->_gname_len;
     return true;
 }
 
 z_result_t _z_f_link_open_bt(_z_link_t *self) {
-    _z_bt_link_state_t *state = _z_bt_link_state(self);
-    if (state == NULL) {
+    _z_bt_link_t *link = _z_bt_link(self);
+    if (link == NULL) {
         _Z_ERROR_RETURN(_Z_ERR_INVALID);
     }
 
@@ -90,13 +89,13 @@ z_result_t _z_f_link_open_bt(_z_link_t *self) {
         tout = (uint32_t)strtoul(tout_as_str, NULL, 10);
     }
 
-    state->_bt._gname = __z_convert_address_bt(&self->_endpoint._locator._address, &state->_gname_len);
-    return _z_open_bt(&state->_bt._sock, state->_bt._gname, mode, profile, tout);
+    link->_bt._gname = __z_convert_address_bt(&self->_endpoint._locator._address, &link->_gname_len);
+    return _z_open_bt(&link->_bt._sock, link->_bt._gname, mode, profile, tout);
 }
 
 z_result_t _z_f_link_listen_bt(_z_link_t *self) {
-    _z_bt_link_state_t *state = _z_bt_link_state(self);
-    if (state == NULL) {
+    _z_bt_link_t *link = _z_bt_link(self);
+    if (link == NULL) {
         _Z_ERROR_RETURN(_Z_ERR_INVALID);
     }
 
@@ -110,42 +109,41 @@ z_result_t _z_f_link_listen_bt(_z_link_t *self) {
         tout = (uint32_t)strtoul(tout_as_str, NULL, 10);
     }
 
-    state->_bt._gname = __z_convert_address_bt(&self->_endpoint._locator._address, &state->_gname_len);
-    return _z_listen_bt(&state->_bt._sock, state->_bt._gname, mode, profile, tout);
+    link->_bt._gname = __z_convert_address_bt(&self->_endpoint._locator._address, &link->_gname_len);
+    return _z_listen_bt(&link->_bt._sock, link->_bt._gname, mode, profile, tout);
 }
 
 void _z_f_link_close_bt(_z_link_t *self) {
-    _z_bt_link_state_t *state = _z_bt_link_state(self);
-    if (state != NULL) {
-        _z_close_bt(&state->_bt._sock);
+    _z_bt_link_t *link = _z_bt_link(self);
+    if (link != NULL) {
+        _z_close_bt(&link->_bt._sock);
     }
 }
 
-static void _z_bt_link_state_drop(void *arg) {
-    _z_bt_link_state_t *state = (_z_bt_link_state_t *)arg;
-    if (state != NULL) {
-        z_free(state->_bt._gname);
-        z_free(state);
+static void _z_bt_link_drop(_z_link_t *self) {
+    _z_bt_link_t *link = _z_bt_link(self);
+    if (link != NULL) {
+        z_free(link->_bt._gname);
     }
 }
 
 size_t _z_f_link_write_bt(const _z_link_t *self, const uint8_t *ptr, size_t len) {
-    const _z_bt_link_state_t *state = _z_bt_link_state_const(self);
-    return state == NULL ? SIZE_MAX : _z_send_bt(state->_bt._sock, ptr, len);
+    const _z_bt_link_t *link = _z_bt_link_const(self);
+    return link == NULL ? SIZE_MAX : _z_send_bt(link->_bt._sock, ptr, len);
 }
 
 size_t _z_f_link_write_all_bt(const _z_link_t *self, const uint8_t *ptr, size_t len) {
-    const _z_bt_link_state_t *state = _z_bt_link_state_const(self);
-    return state == NULL ? SIZE_MAX : _z_send_bt(state->_bt._sock, ptr, len);
+    const _z_bt_link_t *link = _z_bt_link_const(self);
+    return link == NULL ? SIZE_MAX : _z_send_bt(link->_bt._sock, ptr, len);
 }
 
 size_t _z_f_link_read_bt(const _z_link_t *self, uint8_t *ptr, size_t len, _z_slice_t *addr) {
-    const _z_bt_link_state_t *state = _z_bt_link_state_const(self);
-    if (state == NULL) {
+    const _z_bt_link_t *link = _z_bt_link_const(self);
+    if (link == NULL) {
         return SIZE_MAX;
     }
-    size_t rb = _z_read_bt(state->_bt._sock, ptr, len);
-    if ((rb > (size_t)0) && !_z_bt_copy_remote_addr(state, addr)) {
+    size_t rb = _z_read_bt(link->_bt._sock, ptr, len);
+    if ((rb > (size_t)0) && !_z_bt_copy_remote_addr(link, addr)) {
         return SIZE_MAX;
     }
 
@@ -153,12 +151,12 @@ size_t _z_f_link_read_bt(const _z_link_t *self, uint8_t *ptr, size_t len, _z_sli
 }
 
 size_t _z_f_link_read_exact_bt(const _z_link_t *self, uint8_t *ptr, size_t len, _z_slice_t *addr) {
-    const _z_bt_link_state_t *state = _z_bt_link_state_const(self);
-    if (state == NULL) {
+    const _z_bt_link_t *link = _z_bt_link_const(self);
+    if (link == NULL) {
         return SIZE_MAX;
     }
-    size_t rb = _z_read_exact_bt(state->_bt._sock, ptr, len);
-    if ((rb == len) && !_z_bt_copy_remote_addr(state, addr)) {
+    size_t rb = _z_read_exact_bt(link->_bt._sock, ptr, len);
+    if ((rb == len) && !_z_bt_copy_remote_addr(link, addr)) {
         return SIZE_MAX;
     }
 
@@ -167,37 +165,43 @@ size_t _z_f_link_read_exact_bt(const _z_link_t *self, uint8_t *ptr, size_t len, 
 
 uint16_t _z_get_link_mtu_bt(void) { return SPP_MAXIMUM_PAYLOAD; }
 
-z_result_t _z_new_link_bt(_z_link_t *zl, _z_endpoint_t endpoint) {
-    _z_bt_link_state_t *state = (_z_bt_link_state_t *)z_malloc(sizeof(_z_bt_link_state_t));
-    if (state == NULL) {
+z_result_t _z_new_link_bt(_z_link_t **zl, _z_endpoint_t *endpoint) {
+    if (zl == NULL) {
+        _Z_ERROR_RETURN(_Z_ERR_INVALID);
+    }
+    *zl = NULL;
+
+    _z_bt_link_t *link = (_z_bt_link_t *)z_malloc(sizeof(_z_bt_link_t));
+    if (link == NULL) {
         _Z_ERROR_RETURN(_Z_ERR_SYSTEM_OUT_OF_MEMORY);
     }
-    memset(state, 0, sizeof(_z_bt_link_state_t));
+    memset(link, 0, sizeof(_z_bt_link_t));
 
-    zl->_state = state;
-    zl->_state_drop_f = _z_bt_link_state_drop;
-    zl->_cap._transport = Z_LINK_CAP_TRANSPORT_MULTICAST;
-    zl->_cap._flow = Z_LINK_CAP_FLOW_STREAM;
-    zl->_cap._is_reliable = false;
+    _z_link_t *base = &link->_base;
+    base->_endpoint = *endpoint;
+    *endpoint = (_z_endpoint_t){0};
+    base->_drop_f = _z_bt_link_drop;
+    base->_cap._transport = Z_LINK_CAP_TRANSPORT_MULTICAST;
+    base->_cap._flow = Z_LINK_CAP_FLOW_STREAM;
+    base->_cap._is_reliable = false;
 
-    zl->_mtu = _z_get_link_mtu_bt();
+    base->_mtu = _z_get_link_mtu_bt();
 
-    zl->_endpoint = endpoint;
+    base->_close_f = _z_f_link_close_bt;
 
-    zl->_close_f = _z_f_link_close_bt;
+    base->_write_f = _z_f_link_write_bt;
+    base->_write_all_f = _z_f_link_write_all_bt;
+    base->_read_f = _z_f_link_read_bt;
+    base->_read_exact_f = _z_f_link_read_exact_bt;
 
-    zl->_write_f = _z_f_link_write_bt;
-    zl->_write_all_f = _z_f_link_write_all_bt;
-    zl->_read_f = _z_f_link_read_bt;
-    zl->_read_exact_f = _z_f_link_read_exact_bt;
-    zl->_wait_peers_readable_f = NULL;
+    *zl = base;
 
     return _Z_RES_OK;
 }
 
-static z_result_t _z_link_driver_bt_create(_z_link_t *link, _z_endpoint_t *endpoint, const _z_config_t *session_cfg) {
+static z_result_t _z_link_driver_bt_create(_z_link_t **link, _z_endpoint_t *endpoint, const _z_config_t *session_cfg) {
     _ZP_UNUSED(session_cfg);
-    return _z_new_link_bt(link, *endpoint);
+    return _z_new_link_bt(link, endpoint);
 }
 
 const _z_link_driver_t _z_link_driver_bt = {

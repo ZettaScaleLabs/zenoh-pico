@@ -15,7 +15,6 @@
 #include "zenoh-pico/transport/manager.h"
 
 #include <stddef.h>
-#include <stdlib.h>
 
 #include "zenoh-pico/link/link.h"
 #include "zenoh-pico/runtime/runtime.h"
@@ -64,15 +63,10 @@ static z_result_t _z_new_transport_client(_z_transport_t *zt, const _z_string_t 
                                           const _z_config_t *session_cfg) {
     z_result_t ret = _Z_RES_OK;
     // Init link
-    _z_link_t *zl = (_z_link_t *)z_malloc(sizeof(_z_link_t));
-    if (zl == NULL) {
-        return _Z_ERR_SYSTEM_OUT_OF_MEMORY;
-    }
-    memset(zl, 0, sizeof(_z_link_t));
+    _z_link_t *zl = NULL;
     // Open link
-    ret = _z_open_link(zl, locator, session_cfg);
+    ret = _z_open_link(&zl, locator, session_cfg);
     if (ret != _Z_RES_OK) {
-        z_free(zl);
         return ret;
     }
     // Open transport
@@ -124,19 +118,14 @@ static z_result_t _z_new_transport_peer(_z_transport_t *zt, const _z_string_t *l
     _ZP_UNUSED(runtime);
 #endif
     // Init link
-    _z_link_t *zl = (_z_link_t *)z_malloc(sizeof(_z_link_t));
-    if (zl == NULL) {
-        return _Z_ERR_SYSTEM_OUT_OF_MEMORY;
-    }
-    memset(zl, 0, sizeof(_z_link_t));
+    _z_link_t *zl = NULL;
     // Listen link
     if (peer_op == _Z_PEER_OP_OPEN) {
-        ret = _z_open_link(zl, locator, session_cfg);
+        ret = _z_open_link(&zl, locator, session_cfg);
     } else {
-        ret = _z_listen_link(zl, locator, session_cfg);
+        ret = _z_listen_link(&zl, locator, session_cfg);
     }
     if (ret != _Z_RES_OK) {
-        z_free(zl);
         return ret;
     }
     switch (zl->_cap._transport) {

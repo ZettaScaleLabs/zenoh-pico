@@ -29,8 +29,9 @@
 #if Z_FEATURE_RAWETH_TRANSPORT == 1
 
 typedef struct {
+    _z_link_t _base;
     _z_raweth_socket_t _raweth;
-} _z_raweth_link_state_t;
+} _z_raweth_link_t;
 
 #define RAWETH_CFG_TUPLE_SEPARATOR '#'
 #define RAWETH_CFG_LIST_SEPARATOR ","
@@ -91,22 +92,14 @@ static size_t _z_f_link_read_raweth(const _z_link_t *self, uint8_t *ptr, size_t 
 static size_t _z_f_link_read_exact_raweth(const _z_link_t *self, uint8_t *ptr, size_t len, _z_slice_t *addr);
 static uint16_t _z_get_link_mtu_raweth(void);
 
-static _z_raweth_link_state_t *_z_raweth_link_state(_z_link_t *link) {
-    return (_z_raweth_link_state_t *)_z_link_state(link);
-}
-
-static const _z_raweth_link_state_t *_z_raweth_link_state_const(const _z_link_t *link) {
-    return (const _z_raweth_link_state_t *)_z_link_state_const(link);
-}
-
 _z_raweth_socket_t *_z_link_raweth_socket(_z_link_t *link) {
-    _z_raweth_link_state_t *state = _z_raweth_link_state(link);
-    return state == NULL ? NULL : &state->_raweth;
+    _z_raweth_link_t *raweth_link = (_z_raweth_link_t *)link;
+    return raweth_link == NULL ? NULL : &raweth_link->_raweth;
 }
 
 const _z_raweth_socket_t *_z_link_raweth_socket_const(const _z_link_t *link) {
-    const _z_raweth_link_state_t *state = _z_raweth_link_state_const(link);
-    return state == NULL ? NULL : &state->_raweth;
+    const _z_raweth_link_t *raweth_link = (const _z_raweth_link_t *)link;
+    return raweth_link == NULL ? NULL : &raweth_link->_raweth;
 }
 
 static bool _z_valid_iface_raweth(_z_str_intmap_t *config) {
@@ -444,17 +437,16 @@ static void _z_f_link_close_raweth(_z_link_t *self) {
     _z_close_raweth(&socket->_sock);
 }
 
-static void _z_raweth_link_state_drop(void *arg) {
-    _z_raweth_link_state_t *state = (_z_raweth_link_state_t *)arg;
-    if (state == NULL) {
+static void _z_raweth_link_drop(_z_link_t *self) {
+    _z_raweth_link_t *link = (_z_raweth_link_t *)self;
+    if (link == NULL) {
         return;
     }
 
-    _zp_raweth_mapping_array_clear(&state->_raweth._mapping);
-    if (_zp_raweth_whitelist_array_len(&state->_raweth._whitelist) != 0) {
-        _zp_raweth_whitelist_array_clear(&state->_raweth._whitelist);
+    _zp_raweth_mapping_array_clear(&link->_raweth._mapping);
+    if (_zp_raweth_whitelist_array_len(&link->_raweth._whitelist) != 0) {
+        _zp_raweth_whitelist_array_clear(&link->_raweth._whitelist);
     }
-    z_free(state);
 }
 
 static size_t _z_f_link_write_raweth(const _z_link_t *self, const uint8_t *ptr, size_t len) {
@@ -497,36 +489,42 @@ z_result_t _z_endpoint_raweth_valid(_z_endpoint_t *endpoint) {
     return _Z_RES_OK;
 }
 
-z_result_t _z_new_link_raweth(_z_link_t *zl, _z_endpoint_t endpoint) {
-    _z_raweth_link_state_t *state = (_z_raweth_link_state_t *)z_malloc(sizeof(_z_raweth_link_state_t));
-    if (state == NULL) {
+z_result_t _z_new_link_raweth(_z_link_t **zl, _z_endpoint_t *endpoint) {
+    if (zl == NULL) {
+        _Z_ERROR_RETURN(_Z_ERR_INVALID);
+    }
+    *zl = NULL;
+
+    _z_raweth_link_t *link = (_z_raweth_link_t *)z_malloc(sizeof(_z_raweth_link_t));
+    if (link == NULL) {
         _Z_ERROR_RETURN(_Z_ERR_SYSTEM_OUT_OF_MEMORY);
     }
-    memset(state, 0, sizeof(_z_raweth_link_state_t));
+    memset(link, 0, sizeof(_z_raweth_link_t));
 
-    zl->_state = state;
-    zl->_state_drop_f = _z_raweth_link_state_drop;
-    zl->_cap._transport = Z_LINK_CAP_TRANSPORT_RAWETH;
-    zl->_cap._is_reliable = false;
-    zl->_mtu = _z_get_link_mtu_raweth();
+    _z_link_t *base = &link->_base;
+    base->_endpoint = *endpoint;
+    *endpoint = (_z_endpoint_t){0};
+    base->_drop_f = _z_raweth_link_drop;
+    base->_cap._transport = Z_LINK_CAP_TRANSPORT_RAWETH;
+    base->_cap._is_reliable = false;
+    base->_mtu = _z_get_link_mtu_raweth();
 
-    zl->_endpoint = endpoint;
+    base->_close_f = _z_f_link_close_raweth;
 
-    zl->_close_f = _z_f_link_close_raweth;
+    base->_write_f = _z_f_link_write_raweth;
+    base->_write_all_f = _z_f_link_write_all_raweth;
+    base->_read_f = _z_f_link_read_raweth;
+    base->_read_exact_f = _z_f_link_read_exact_raweth;
 
-    zl->_write_f = _z_f_link_write_raweth;
-    zl->_write_all_f = _z_f_link_write_all_raweth;
-    zl->_read_f = _z_f_link_read_raweth;
-    zl->_read_exact_f = _z_f_link_read_exact_raweth;
-    zl->_wait_peers_readable_f = NULL;
+    *zl = base;
 
     return _Z_RES_OK;
 }
 
-static z_result_t _z_link_driver_raweth_create(_z_link_t *link, _z_endpoint_t *endpoint,
+static z_result_t _z_link_driver_raweth_create(_z_link_t **link, _z_endpoint_t *endpoint,
                                                const _z_config_t *session_cfg) {
     _ZP_UNUSED(session_cfg);
-    return _z_new_link_raweth(link, *endpoint);
+    return _z_new_link_raweth(link, endpoint);
 }
 
 const _z_link_driver_t _z_link_driver_raweth = {
@@ -561,7 +559,7 @@ z_result_t _z_endpoint_raweth_valid(_z_endpoint_t *endpoint) {
     _Z_ERROR_RETURN(_Z_ERR_TRANSPORT_NOT_AVAILABLE);
 }
 
-z_result_t _z_new_link_raweth(_z_link_t *zl, _z_endpoint_t endpoint) {
+z_result_t _z_new_link_raweth(_z_link_t **zl, _z_endpoint_t *endpoint) {
     _ZP_UNUSED(zl);
     _ZP_UNUSED(endpoint);
     _Z_ERROR_RETURN(_Z_ERR_TRANSPORT_NOT_AVAILABLE);

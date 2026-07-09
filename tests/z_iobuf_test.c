@@ -34,9 +34,17 @@ typedef struct {
     size_t _data_idx;
 } _z_scripted_peer_read_t;
 
+typedef struct {
+    _z_link_peer_impl_t _base;
+    _z_scripted_peer_read_t *_script;
+} _z_scripted_peer_impl_t;
+
+static void _z_scripted_peer_impl_clear(_z_link_peer_impl_t *base) { _ZP_UNUSED(base); }
+
 static size_t _z_scripted_peer_read(const _z_link_t *link, const _z_link_peer_t *peer, uint8_t *ptr, size_t len) {
     (void)link;
-    _z_scripted_peer_read_t *script = (_z_scripted_peer_read_t *)_z_link_peer_state((_z_link_peer_t *)peer);
+    const _z_scripted_peer_impl_t *impl = (const _z_scripted_peer_impl_t *)_z_link_peer_impl_const(peer);
+    _z_scripted_peer_read_t *script = impl == NULL ? NULL : impl->_script;
     assert(script != NULL);
     assert(script->_read_idx < script->_read_count);
 
@@ -54,6 +62,22 @@ static size_t _z_scripted_peer_read(const _z_link_t *link, const _z_link_peer_t 
 static const _z_link_peer_ops_t _z_scripted_peer_ops = {
     ._read_f = _z_scripted_peer_read,
 };
+
+static z_result_t _z_scripted_peer_init(_z_link_peer_t *peer, _z_scripted_peer_read_t *script) {
+    _z_scripted_peer_impl_t *impl = (_z_scripted_peer_impl_t *)z_malloc(sizeof(_z_scripted_peer_impl_t));
+    if (impl == NULL) {
+        return _Z_ERR_SYSTEM_OUT_OF_MEMORY;
+    }
+    _z_link_peer_impl_init(&impl->_base, &_z_scripted_peer_ops, _z_scripted_peer_impl_clear);
+    impl->_script = script;
+    z_result_t ret = _z_link_peer_init(peer, &impl->_base);
+    if (ret != _Z_RES_OK) {
+        _z_link_peer_impl_clear(&impl->_base);
+        z_free(impl);
+        return ret;
+    }
+    return _Z_RES_OK;
+}
 
 /*=============================*/
 /*     Printing functions      */
@@ -363,9 +387,10 @@ static void link_peer_recv_exact_zbuf_script(const size_t *reads, size_t read_co
         ._data_idx = 0,
     };
     _z_link_peer_t peer = _z_link_peer_null();
-    assert(_z_link_peer_init(&peer, &_z_scripted_peer_ops, &script, NULL) == _Z_RES_OK);
+    assert(_z_scripted_peer_init(&peer, &script) == _Z_RES_OK);
 
     size_t rb = _z_link_peer_recv_exact_zbuf(NULL, &zbf, len, &peer);
+    _z_link_peer_clear(&peer);
     assert(rb == expected_ret);
     if (expected_ret == len) {
         assert(_z_zbuf_get_wpos(&zbf) == initial_wpos + len);
@@ -380,7 +405,6 @@ static void link_peer_recv_exact_zbuf_script(const size_t *reads, size_t read_co
         assert(_z_zbuf_readable_len(&zbf) == 0);
     }
 
-    _z_link_peer_clear(&peer);
     _z_zbuf_clear(&zbf);
 }
 

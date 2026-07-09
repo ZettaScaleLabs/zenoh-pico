@@ -20,38 +20,39 @@
 #include "zenoh-pico/link/transport/socket.h"
 #include "zenoh-pico/utils/logging.h"
 
-typedef struct _z_link_socket_peer_state_t {
+typedef struct _z_link_socket_peer_impl_t {
+    _z_link_peer_impl_t _base;
     _z_sys_net_socket_t _socket;
     _z_link_socket_close_f _close_f;
-} _z_link_socket_peer_state_t;
+} _z_link_socket_peer_impl_t;
 
-static _z_link_socket_peer_state_t *_z_link_peer_socket_state(_z_link_peer_t *peer) {
-    return (_z_link_socket_peer_state_t *)_z_link_peer_state(peer);
+static _z_link_socket_peer_impl_t *_z_link_socket_peer_impl(_z_link_peer_t *peer) {
+    return (_z_link_socket_peer_impl_t *)_z_link_peer_impl(peer);
 }
 
-static const _z_link_socket_peer_state_t *_z_link_peer_socket_state_const(const _z_link_peer_t *peer) {
-    return (const _z_link_socket_peer_state_t *)_z_link_peer_state_const(peer);
+static const _z_link_socket_peer_impl_t *_z_link_socket_peer_impl_const(const _z_link_peer_t *peer) {
+    return (const _z_link_socket_peer_impl_t *)_z_link_peer_impl_const(peer);
 }
 
 _z_sys_net_socket_t *_z_link_socket_peer_get_socket(_z_link_peer_t *peer) {
-    _z_link_socket_peer_state_t *state = _z_link_peer_socket_state(peer);
-    return state == NULL ? NULL : &state->_socket;
+    _z_link_socket_peer_impl_t *impl = _z_link_socket_peer_impl(peer);
+    return impl == NULL ? NULL : &impl->_socket;
 }
 
 const _z_sys_net_socket_t *_z_link_socket_peer_get_socket_const(const _z_link_peer_t *peer) {
-    const _z_link_socket_peer_state_t *state = _z_link_peer_socket_state_const(peer);
-    return state == NULL ? NULL : &state->_socket;
+    const _z_link_socket_peer_impl_t *impl = _z_link_socket_peer_impl_const(peer);
+    return impl == NULL ? NULL : &impl->_socket;
 }
 
-static void _z_link_socket_peer_state_drop(void *arg) {
-    _z_link_socket_peer_state_t *state = (_z_link_socket_peer_state_t *)arg;
-    if (state == NULL) {
+static void _z_link_socket_peer_impl_clear(_z_link_peer_impl_t *base) {
+    _z_link_socket_peer_impl_t *impl = (_z_link_socket_peer_impl_t *)base;
+    if (impl == NULL) {
         return;
     }
-    if (state->_close_f != NULL) {
-        state->_close_f(&state->_socket);
+    if (impl->_close_f != NULL) {
+        impl->_close_f(&impl->_socket);
+        impl->_close_f = NULL;
     }
-    z_free(state);
 }
 
 z_result_t _z_link_socket_peer_from_socket(_z_link_peer_t *peer, _z_sys_net_socket_t socket,
@@ -60,17 +61,31 @@ z_result_t _z_link_socket_peer_from_socket(_z_link_peer_t *peer, _z_sys_net_sock
         _Z_ERROR_RETURN(_Z_ERR_INVALID);
     }
 
-    _z_link_socket_peer_state_t *state = (_z_link_socket_peer_state_t *)z_malloc(sizeof(_z_link_socket_peer_state_t));
-    if (state == NULL) {
+    _z_link_socket_peer_impl_t *impl = (_z_link_socket_peer_impl_t *)z_malloc(sizeof(_z_link_socket_peer_impl_t));
+    if (impl == NULL) {
         _Z_ERROR_RETURN(_Z_ERR_SYSTEM_OUT_OF_MEMORY);
     }
-    *state = (_z_link_socket_peer_state_t){
-        ._socket = socket,
-        ._close_f = close_f,
-    };
+    _z_link_peer_impl_init(&impl->_base, ops, _z_link_socket_peer_impl_clear);
+    impl->_socket = socket;
+    impl->_close_f = close_f;
 
-    _Z_CLEAN_RETURN_IF_ERR(_z_link_peer_init(peer, ops, state, _z_link_socket_peer_state_drop), z_free(state));
+    z_result_t ret = _z_link_peer_init(peer, &impl->_base);
+    if (ret != _Z_RES_OK) {
+        _z_link_socket_peer_impl_clear(&impl->_base);
+        z_free(impl);
+        return ret;
+    }
     return _Z_RES_OK;
+}
+
+void _z_link_socket_peer_close(_z_link_peer_t *peer) {
+    _z_link_socket_peer_impl_t *impl = _z_link_socket_peer_impl(peer);
+    if ((impl == NULL) || (impl->_close_f == NULL)) {
+        return;
+    }
+    _z_link_socket_close_f close_f = impl->_close_f;
+    impl->_close_f = NULL;
+    close_f(&impl->_socket);
 }
 
 static void _z_link_peer_socket_iter_reset(_z_socket_wait_iter_t *iter) {
@@ -121,14 +136,4 @@ z_result_t _z_link_socket_peer_get_endpoints(const _z_link_peer_t *peer, char *l
         _Z_ERROR_RETURN(_Z_ERR_INVALID);
     }
     return _z_socket_get_endpoints(socket, local, local_len, remote, remote_len);
-}
-
-void _z_link_socket_peer_close(_z_link_peer_t *peer) {
-    _z_link_socket_peer_state_t *state = _z_link_peer_socket_state(peer);
-    if ((state == NULL) || (state->_close_f == NULL)) {
-        return;
-    }
-    _z_link_socket_close_f close_f = state->_close_f;
-    state->_close_f = NULL;
-    close_f(&state->_socket);
 }

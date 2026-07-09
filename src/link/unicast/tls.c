@@ -30,10 +30,9 @@
 #if Z_FEATURE_LINK_TLS == 1
 
 typedef struct {
+    _z_link_t _base;
     _z_tls_socket_t _tls;
-} _z_tls_link_state_t;
-
-static _z_tls_link_state_t *_z_tls_link_state(_z_link_t *link) { return (_z_tls_link_state_t *)_z_link_state(link); }
+} _z_tls_link_t;
 
 static size_t _z_link_peer_read_tls(const _z_link_t *link, const _z_link_peer_t *peer, uint8_t *ptr, size_t len);
 static size_t _z_link_peer_write_tls(const _z_link_t *link, const _z_link_peer_t *peer, const uint8_t *ptr, size_t len);
@@ -97,8 +96,8 @@ static _z_config_t _z_tls_merge_config(_z_str_intmap_t *endpoint_cfg, const _z_c
 }
 
 static z_result_t _z_f_link_open_tls(_z_link_t *self) {
-    _z_tls_link_state_t *state = _z_tls_link_state(self);
-    if (state == NULL) {
+    _z_tls_link_t *link = (_z_tls_link_t *)self;
+    if (link == NULL) {
         _Z_ERROR_RETURN(_Z_ERR_INVALID);
     }
 
@@ -113,7 +112,7 @@ static z_result_t _z_f_link_open_tls(_z_link_t *self) {
     _Z_CLEAN_RETURN_IF_ERR(_z_tcp_endpoint_init_from_address(&rep, &self->_endpoint._locator._address),
                            z_free(hostname));
 
-    z_result_t ret = _z_open_tls(&state->_tls, &rep, hostname, &self->_endpoint._config, false);
+    z_result_t ret = _z_open_tls(&link->_tls, &rep, hostname, &self->_endpoint._config, false);
     _z_tcp_endpoint_clear(&rep);
     z_free(hostname);
     if (ret != _Z_RES_OK) {
@@ -122,14 +121,14 @@ static z_result_t _z_f_link_open_tls(_z_link_t *self) {
     }
 
     // Link-owned TLS state is closed through _z_close_tls(); peer handles only provide link-peer ops.
-    _Z_CLEAN_RETURN_IF_ERR(_z_link_socket_peer_from_socket(&self->_peer, state->_tls._sock, NULL, &_z_tls_peer_ops),
-                           _z_close_tls(&state->_tls));
+    _Z_CLEAN_RETURN_IF_ERR(_z_link_socket_peer_from_socket(&self->_peer, link->_tls._sock, NULL, &_z_tls_peer_ops),
+                           _z_close_tls(&link->_tls));
     return _Z_RES_OK;
 }
 
 static z_result_t _z_f_link_listen_tls(_z_link_t *self) {
-    _z_tls_link_state_t *state = _z_tls_link_state(self);
-    if (state == NULL) {
+    _z_tls_link_t *link = (_z_tls_link_t *)self;
+    if (link == NULL) {
         _Z_ERROR_RETURN(_Z_ERR_INVALID);
     }
 
@@ -145,15 +144,15 @@ static z_result_t _z_f_link_listen_tls(_z_link_t *self) {
     _z_sys_net_endpoint_t rep = {0};
     _Z_CLEAN_RETURN_IF_ERR(_z_tcp_endpoint_init_from_address(&rep, &self->_endpoint._locator._address), z_free(host));
 
-    ret = _z_listen_tls(&state->_tls, &rep, &self->_endpoint._config);
+    ret = _z_listen_tls(&link->_tls, &rep, &self->_endpoint._config);
     _z_tcp_endpoint_clear(&rep);
     if (ret != _Z_RES_OK) {
         _Z_ERROR("TLS listen failed");
     } else {
         // Link-owned TLS state is closed through _z_close_tls(); peer handles only provide link-peer ops.
-        ret = _z_link_socket_peer_from_socket(&self->_peer, state->_tls._sock, NULL, &_z_tls_peer_ops);
+        ret = _z_link_socket_peer_from_socket(&self->_peer, link->_tls._sock, NULL, &_z_tls_peer_ops);
         if (ret != _Z_RES_OK) {
-            _z_close_tls(&state->_tls);
+            _z_close_tls(&link->_tls);
         }
     }
 
@@ -162,9 +161,9 @@ static z_result_t _z_f_link_listen_tls(_z_link_t *self) {
 }
 
 static void _z_f_link_close_tls(_z_link_t *self) {
-    _z_tls_link_state_t *state = _z_tls_link_state(self);
-    if (state != NULL) {
-        _z_close_tls(&state->_tls);
+    _z_tls_link_t *link = (_z_tls_link_t *)self;
+    if (link != NULL) {
+        _z_close_tls(&link->_tls);
     }
 }
 
@@ -216,13 +215,6 @@ static size_t _z_f_link_read_exact_tls(const _z_link_t *self, uint8_t *ptr, size
     } while (n != len);
 
     return n;
-}
-
-static void _z_tls_link_state_drop(void *arg) {
-    _z_tls_link_state_t *state = (_z_tls_link_state_t *)arg;
-    if (state != NULL) {
-        z_free(state);
-    }
 }
 
 static size_t _z_link_peer_read_tls(const _z_link_t *link, const _z_link_peer_t *peer, uint8_t *ptr, size_t len) {
@@ -321,43 +313,49 @@ static z_result_t _z_f_link_accept_peer_complete_tls(const _z_link_t *link, _z_l
     return _z_tls_accept(socket, listen_socket);
 }
 
-z_result_t _z_new_link_tls(_z_link_t *zl, _z_endpoint_t *endpoint, const _z_config_t *session_cfg) {
-    _z_tls_link_state_t *state = (_z_tls_link_state_t *)z_malloc(sizeof(_z_tls_link_state_t));
-    if (state == NULL) {
+z_result_t _z_new_link_tls(_z_link_t **zl, _z_endpoint_t *endpoint, const _z_config_t *session_cfg) {
+    if (zl == NULL) {
+        _Z_ERROR_RETURN(_Z_ERR_INVALID);
+    }
+    *zl = NULL;
+
+    _z_tls_link_t *link = (_z_tls_link_t *)z_malloc(sizeof(_z_tls_link_t));
+    if (link == NULL) {
         _Z_ERROR_RETURN(_Z_ERR_SYSTEM_OUT_OF_MEMORY);
     }
-    memset(state, 0, sizeof(_z_tls_link_state_t));
+    memset(link, 0, sizeof(_z_tls_link_t));
 
-    zl->_state = state;
-    zl->_state_drop_f = _z_tls_link_state_drop;
-    zl->_cap._transport = Z_LINK_CAP_TRANSPORT_UNICAST;
-    zl->_cap._flow = Z_LINK_CAP_FLOW_STREAM;
-    zl->_cap._is_reliable = true;
+    _z_link_t *base = &link->_base;
+    base->_endpoint = *endpoint;
+    *endpoint = (_z_endpoint_t){0};
+    base->_cap._transport = Z_LINK_CAP_TRANSPORT_UNICAST;
+    base->_cap._flow = Z_LINK_CAP_FLOW_STREAM;
+    base->_cap._is_reliable = true;
 
-    zl->_mtu = _z_get_link_mtu_tls();
+    base->_mtu = _z_get_link_mtu_tls();
 
-    _z_config_t cfg = _z_tls_merge_config(&endpoint->_config, session_cfg);
-    zl->_endpoint = *endpoint;
-    zl->_endpoint._config = cfg;
-    _z_str_intmap_clear(&endpoint->_config);
-    _Z_DEBUG("TLS locator: '%.*s'", (int)_z_string_len(&endpoint->_locator._address),
-             _z_string_data(&endpoint->_locator._address));
+    _z_config_t cfg = _z_tls_merge_config(&base->_endpoint._config, session_cfg);
+    base->_endpoint._config = cfg;
+    _Z_DEBUG("TLS locator: '%.*s'", (int)_z_string_len(&base->_endpoint._locator._address),
+             _z_string_data(&base->_endpoint._locator._address));
 
-    zl->_close_f = _z_f_link_close_tls;
-    zl->_write_f = _z_f_link_write_tls;
-    zl->_write_all_f = _z_f_link_write_all_tls;
-    zl->_read_f = _z_f_link_read_tls;
-    zl->_read_exact_f = _z_f_link_read_exact_tls;
-    zl->_wait_peers_readable_f = _z_link_socket_wait_peers_readable;
-    zl->_open_peer_f = _z_f_link_open_peer_tls;
-    zl->_peer_from_link_f = _z_link_peer_from_default;
-    zl->_accept_peer_f = _z_f_link_accept_tls;
-    zl->_accept_peer_complete_f = _z_f_link_accept_peer_complete_tls;
+    base->_close_f = _z_f_link_close_tls;
+    base->_write_f = _z_f_link_write_tls;
+    base->_write_all_f = _z_f_link_write_all_tls;
+    base->_read_f = _z_f_link_read_tls;
+    base->_read_exact_f = _z_f_link_read_exact_tls;
+    base->_wait_peers_readable_f = _z_link_socket_wait_peers_readable;
+    base->_open_peer_f = _z_f_link_open_peer_tls;
+    base->_peer_from_link_f = _z_link_peer_from_default;
+    base->_accept_peer_f = _z_f_link_accept_tls;
+    base->_accept_peer_complete_f = _z_f_link_accept_peer_complete_tls;
+
+    *zl = base;
 
     return _Z_RES_OK;
 }
 
-static z_result_t _z_link_driver_tls_create(_z_link_t *link, _z_endpoint_t *endpoint, const _z_config_t *session_cfg) {
+static z_result_t _z_link_driver_tls_create(_z_link_t **link, _z_endpoint_t *endpoint, const _z_config_t *session_cfg) {
     return _z_new_link_tls(link, endpoint, session_cfg);
 }
 

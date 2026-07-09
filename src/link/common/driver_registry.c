@@ -14,8 +14,6 @@
 
 #include "zenoh-pico/link/driver_registry.h"
 
-#include <stddef.h>
-
 #include "zenoh-pico/config.h"
 
 #if Z_FEATURE_LINK_TCP == 1

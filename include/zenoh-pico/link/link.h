@@ -89,7 +89,7 @@ typedef z_result_t (*_z_f_link_open_peer)(const struct _z_link_t *self, struct _
 typedef z_result_t (*_z_f_link_peer_from_link)(const struct _z_link_t *self, struct _z_link_peer_t *peer);
 typedef z_result_t (*_z_f_link_accept_peer)(const struct _z_link_t *self, struct _z_link_peer_t *peer);
 typedef z_result_t (*_z_f_link_accept_peer_complete)(const struct _z_link_t *self, struct _z_link_peer_t *peer);
-typedef void (*_z_link_state_drop_f)(void *state);
+typedef void (*_z_f_link_drop)(struct _z_link_t *self);
 
 typedef void (*_z_link_peer_iter_reset_f)(struct _z_link_peer_iter_t *iter);
 typedef bool (*_z_link_peer_iter_next_f)(struct _z_link_peer_iter_t *iter);
@@ -158,30 +158,36 @@ typedef struct _z_link_peer_ops_t {
     void (*_close_f)(struct _z_link_peer_t *peer);
 } _z_link_peer_ops_t;
 
-typedef void (*_z_link_peer_drop_f)(void *state);
+typedef struct _z_link_peer_impl_t _z_link_peer_impl_t;
+typedef void (*_z_link_peer_impl_clear_f)(_z_link_peer_impl_t *impl);
 
-typedef struct _z_link_peer_impl_t {
+struct _z_link_peer_impl_t {
     const _z_link_peer_ops_t *_ops;
-    void *_state;
-    _z_link_peer_drop_f _drop_f;
-} _z_link_peer_impl_t;
+    _z_link_peer_impl_clear_f _clear_f;
+};
 
 void _z_link_peer_impl_clear(_z_link_peer_impl_t *impl);
-_Z_SIMPLE_REFCOUNT_DEFINE(_z_link_peer_impl, _z_link_peer_impl)
+/*
+ * Link peer implementations are embedded as the first member of concrete
+ * driver-owned peer objects. Use the normal refcount wrapper so the handle can
+ * own an already allocated concrete object through its common base pointer.
+ */
+_Z_REFCOUNT_DEFINE_NO_FROM_VAL(_z_link_peer_impl, _z_link_peer_impl)
 
 /*
- * _z_link_peer_t is a strong ref-counted handle to opaque driver-owned per-peer state.
- * _z_link_peer_clone() retains that state, _z_link_peer_move() transfers the handle,
- * _z_link_peer_close() performs the I/O close, and _z_link_peer_clear() releases a
- * reference. The driver drop callback runs on the final release.
+ * _z_link_peer_t is a strong refcounted handle to opaque driver-owned peer state.
+ * _z_link_peer_clone() retains that state, _z_link_peer_move() transfers the
+ * handle, _z_link_peer_close() performs the I/O close, and
+ * _z_link_peer_clear() releases a reference. The driver clear callback runs on
+ * the final release, before the refcount path frees the concrete peer object.
  */
 typedef struct _z_link_peer_t {
-    _z_link_peer_impl_simple_rc_t _impl;
+    _z_link_peer_impl_rc_t _impl;
 } _z_link_peer_t;
 
 static inline _z_link_peer_t _z_link_peer_null(void) {
     _z_link_peer_t peer;
-    peer._impl = _z_link_peer_impl_simple_rc_null();
+    peer._impl = _z_link_peer_impl_rc_null();
     return peer;
 }
 
@@ -191,11 +197,20 @@ static inline void _z_link_peer_move(_z_link_peer_t *dst, _z_link_peer_t *src) {
 }
 
 bool _z_link_peer_check(const _z_link_peer_t *peer);
-z_result_t _z_link_peer_init(_z_link_peer_t *peer, const _z_link_peer_ops_t *ops, void *state,
-                             _z_link_peer_drop_f drop_f);
+// Initializes the embedded base of an already allocated concrete peer implementation.
+void _z_link_peer_impl_init(_z_link_peer_impl_t *impl, const _z_link_peer_ops_t *ops,
+                            _z_link_peer_impl_clear_f clear_f);
+/*
+ * Attaches an already allocated concrete peer implementation to a handle.
+ * This does not allocate or copy the implementation object, but it may allocate
+ * the refcount control block.
+ *
+ * On failure, ownership of `impl` remains with the caller.
+ */
+z_result_t _z_link_peer_init(_z_link_peer_t *peer, _z_link_peer_impl_t *impl);
 _z_link_peer_t _z_link_peer_clone(const _z_link_peer_t *peer);
-void *_z_link_peer_state(_z_link_peer_t *peer);
-const void *_z_link_peer_state_const(const _z_link_peer_t *peer);
+_z_link_peer_impl_t *_z_link_peer_impl(_z_link_peer_t *peer);
+const _z_link_peer_impl_t *_z_link_peer_impl_const(const _z_link_peer_t *peer);
 void _z_link_peer_close(_z_link_peer_t *peer);
 void _z_link_peer_clear(_z_link_peer_t *peer);
 size_t _z_link_peer_read(const struct _z_link_t *link, const _z_link_peer_t *peer, uint8_t *ptr, size_t len);
@@ -207,10 +222,9 @@ z_result_t _z_link_wait_peers_readable(const struct _z_link_t *link, _z_link_pee
 
 typedef struct _z_link_t {
     _z_endpoint_t _endpoint;
-    void *_state;
-    _z_link_state_drop_f _state_drop_f;
     _z_link_peer_t _peer;
 
+    _z_f_link_drop _drop_f;
     _z_f_link_close _close_f;
     _z_f_link_write _write_f;
     _z_f_link_write_all _write_all_f;
@@ -231,8 +245,6 @@ typedef struct _z_link_t {
 
 void _z_link_clear(_z_link_t *zl);
 void _z_link_free(_z_link_t **zl);
-void *_z_link_state(_z_link_t *zl);
-const void *_z_link_state_const(const _z_link_t *zl);
 z_result_t _z_link_open_peer(const _z_link_t *zl, _z_link_peer_t *peer, const _z_string_t *locator,
                              const _z_config_t *session_cfg);
 z_result_t _z_link_peer_from_default(const _z_link_t *zl, _z_link_peer_t *peer);
@@ -240,8 +252,8 @@ z_result_t _z_link_peer_from_link(const _z_link_t *zl, _z_link_peer_t *peer);
 bool _z_link_can_accept_peers(const _z_link_t *zl);
 z_result_t _z_link_accept_peer(const _z_link_t *zl, _z_link_peer_t *peer);
 z_result_t _z_link_accept_peer_complete(const _z_link_t *zl, _z_link_peer_t *peer);
-z_result_t _z_open_link(_z_link_t *zl, const _z_string_t *locator, const _z_config_t *session_cfg);
-z_result_t _z_listen_link(_z_link_t *zl, const _z_string_t *locator, const _z_config_t *session_cfg);
+z_result_t _z_open_link(_z_link_t **zl, const _z_string_t *locator, const _z_config_t *session_cfg);
+z_result_t _z_listen_link(_z_link_t **zl, const _z_string_t *locator, const _z_config_t *session_cfg);
 
 z_result_t _z_link_send_wbuf(const _z_link_t *zl, const _z_wbuf_t *wbf);
 z_result_t _z_link_peer_send_wbuf(const _z_link_t *zl, const _z_wbuf_t *wbf, const _z_link_peer_t *peer);

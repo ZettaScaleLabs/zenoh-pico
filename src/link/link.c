@@ -17,6 +17,7 @@
 #include <stddef.h>
 
 #include "zenoh-pico/link/driver_registry.h"
+#include "zenoh-pico/system/common/platform.h"
 #include "zenoh-pico/utils/logging.h"
 
 typedef enum {
@@ -35,9 +36,14 @@ static inline _z_link_driver_activate_f _z_link_driver_operation_f(const _z_link
     return NULL;
 }
 
-static z_result_t _z_link_create_and_activate(_z_link_t *zl, const _z_string_t *locator, const _z_config_t *session_cfg,
-                                              _z_link_operation_t operation) {
+static z_result_t _z_link_create_and_activate(_z_link_t **zl, const _z_string_t *locator,
+                                              const _z_config_t *session_cfg, _z_link_operation_t operation) {
     z_result_t ret = _Z_RES_OK;
+
+    if (zl == NULL) {
+        _Z_ERROR_RETURN(_Z_ERR_INVALID);
+    }
+    *zl = NULL;
 
     _z_endpoint_t ep;
     ret = _z_endpoint_from_string(&ep, locator);
@@ -63,17 +69,25 @@ static z_result_t _z_link_create_and_activate(_z_link_t *zl, const _z_string_t *
             continue;
         }
 
-        ret = driver->_create_f(zl, &ep, session_cfg);
+        _z_link_t *link = NULL;
+        ret = driver->_create_f(&link, &ep, session_cfg);
         if (ret != _Z_RES_OK) {
             _z_endpoint_clear(&ep);
             return ret;
         }
 
-        if (activate_f(zl) != _Z_RES_OK) {
+        if (link == NULL) {
+            _Z_ERROR("Link driver create returned OK without creating a link");
+            _z_endpoint_clear(&ep);
+            return _Z_ERR_GENERIC;
+        }
+
+        if (activate_f(link) != _Z_RES_OK) {
             _Z_ERROR_LOG(_Z_ERR_TRANSPORT_OPEN_FAILED);
-            _z_link_clear(zl);
+            _z_link_free(&link);
             return _Z_ERR_TRANSPORT_OPEN_FAILED;
         }
+        *zl = link;
         return _Z_RES_OK;
     }
 
@@ -82,11 +96,11 @@ static z_result_t _z_link_create_and_activate(_z_link_t *zl, const _z_string_t *
     return _Z_ERR_CONFIG_LOCATOR_SCHEMA_UNKNOWN;
 }
 
-z_result_t _z_open_link(_z_link_t *zl, const _z_string_t *locator, const _z_config_t *session_cfg) {
+z_result_t _z_open_link(_z_link_t **zl, const _z_string_t *locator, const _z_config_t *session_cfg) {
     return _z_link_create_and_activate(zl, locator, session_cfg, _Z_LINK_OPERATION_OPEN);
 }
 
-z_result_t _z_listen_link(_z_link_t *zl, const _z_string_t *locator, const _z_config_t *session_cfg) {
+z_result_t _z_listen_link(_z_link_t **zl, const _z_string_t *locator, const _z_config_t *session_cfg) {
     return _z_link_create_and_activate(zl, locator, session_cfg, _Z_LINK_OPERATION_LISTEN);
 }
 
@@ -97,7 +111,7 @@ void _z_link_clear(_z_link_t *l) {
 
     /*
      * Close while driver state and the default peer are still available; then release
-     * the default peer before dropping driver-private state.
+     * the default peer before dropping embedded driver-private state.
      */
     if (l->_close_f != NULL) {
         l->_close_f(l);
@@ -106,8 +120,8 @@ void _z_link_clear(_z_link_t *l) {
     _z_link_peer_clear(&l->_peer);
     _z_endpoint_clear(&l->_endpoint);
 
-    if (l->_state_drop_f != NULL) {
-        l->_state_drop_f(l->_state);
+    if (l->_drop_f != NULL) {
+        l->_drop_f(l);
     }
 
     *l = (_z_link_t){0};
@@ -124,49 +138,38 @@ void _z_link_free(_z_link_t **l) {
     }
 }
 
-void *_z_link_state(_z_link_t *zl) { return zl == NULL ? NULL : zl->_state; }
-
-const void *_z_link_state_const(const _z_link_t *zl) { return zl == NULL ? NULL : zl->_state; }
-
 void _z_link_peer_impl_clear(_z_link_peer_impl_t *impl) {
-    if (impl == NULL) {
-        return;
+    if ((impl != NULL) && (impl->_clear_f != NULL)) {
+        impl->_clear_f(impl);
     }
-    if (impl->_drop_f != NULL) {
-        impl->_drop_f(impl->_state);
-    }
-    *impl = (_z_link_peer_impl_t){0};
 }
 
-static _z_link_peer_impl_t *_z_link_peer_impl(_z_link_peer_t *peer) {
-    if ((peer == NULL) || _z_link_peer_impl_simple_rc_is_null(&peer->_impl)) {
-        return NULL;
-    }
-    return _z_link_peer_impl_simple_rc_value(&peer->_impl);
+_z_link_peer_impl_t *_z_link_peer_impl(_z_link_peer_t *peer) {
+    return (peer == NULL) || (peer->_impl._cnt == NULL) ? NULL : peer->_impl._val;
 }
 
-static const _z_link_peer_impl_t *_z_link_peer_impl_const(const _z_link_peer_t *peer) {
-    if ((peer == NULL) || _z_link_peer_impl_simple_rc_is_null(&peer->_impl)) {
-        return NULL;
-    }
-    return _z_link_peer_impl_simple_rc_value(&peer->_impl);
+const _z_link_peer_impl_t *_z_link_peer_impl_const(const _z_link_peer_t *peer) {
+    return (peer == NULL) || (peer->_impl._cnt == NULL) ? NULL : peer->_impl._val;
 }
 
 bool _z_link_peer_check(const _z_link_peer_t *peer) { return _z_link_peer_impl_const(peer) != NULL; }
 
-z_result_t _z_link_peer_init(_z_link_peer_t *peer, const _z_link_peer_ops_t *ops, void *state,
-                             _z_link_peer_drop_f drop_f) {
-    if ((peer == NULL) || (ops == NULL)) {
+void _z_link_peer_impl_init(_z_link_peer_impl_t *impl, const _z_link_peer_ops_t *ops,
+                            _z_link_peer_impl_clear_f clear_f) {
+    if (impl == NULL) {
+        return;
+    }
+    impl->_ops = ops;
+    impl->_clear_f = clear_f;
+}
+
+z_result_t _z_link_peer_init(_z_link_peer_t *peer, _z_link_peer_impl_t *impl) {
+    if ((peer == NULL) || (impl == NULL) || (impl->_ops == NULL) || (impl->_clear_f == NULL)) {
         _Z_ERROR_RETURN(_Z_ERR_INVALID);
     }
 
-    _z_link_peer_impl_t impl = {
-        ._ops = ops,
-        ._state = state,
-        ._drop_f = drop_f,
-    };
-    _z_link_peer_impl_simple_rc_t rc = _z_link_peer_impl_simple_rc_new_from_val(&impl);
-    if (_z_link_peer_impl_simple_rc_is_null(&rc)) {
+    _z_link_peer_impl_rc_t rc = _z_link_peer_impl_rc_new(impl);
+    if (rc._cnt == NULL) {
         _Z_ERROR_RETURN(_Z_ERR_SYSTEM_OUT_OF_MEMORY);
     }
     *peer = (_z_link_peer_t){._impl = rc};
@@ -176,19 +179,9 @@ z_result_t _z_link_peer_init(_z_link_peer_t *peer, const _z_link_peer_ops_t *ops
 _z_link_peer_t _z_link_peer_clone(const _z_link_peer_t *peer) {
     _z_link_peer_t clone = _z_link_peer_null();
     if (_z_link_peer_check(peer)) {
-        clone._impl = _z_link_peer_impl_simple_rc_clone(&peer->_impl);
+        clone._impl = _z_link_peer_impl_rc_clone(&peer->_impl);
     }
     return clone;
-}
-
-void *_z_link_peer_state(_z_link_peer_t *peer) {
-    _z_link_peer_impl_t *impl = _z_link_peer_impl(peer);
-    return impl != NULL ? impl->_state : NULL;
-}
-
-const void *_z_link_peer_state_const(const _z_link_peer_t *peer) {
-    const _z_link_peer_impl_t *impl = _z_link_peer_impl_const(peer);
-    return impl != NULL ? impl->_state : NULL;
 }
 
 void _z_link_peer_close(_z_link_peer_t *peer) {
@@ -200,7 +193,12 @@ void _z_link_peer_close(_z_link_peer_t *peer) {
 
 void _z_link_peer_clear(_z_link_peer_t *peer) {
     if (peer != NULL) {
-        _z_link_peer_impl_simple_rc_drop(&peer->_impl);
+        if (peer->_impl._cnt == NULL) {
+            return;
+        }
+        _z_link_peer_impl_rc_t impl = peer->_impl;
+        peer->_impl = _z_link_peer_impl_rc_null();
+        _z_link_peer_impl_rc_drop(&impl);
     }
 }
 
