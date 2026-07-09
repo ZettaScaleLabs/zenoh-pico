@@ -78,25 +78,26 @@ static _z_zint_t _z_transport_tx_get_sn(_z_transport_common_t *ztc, z_reliabilit
  * transport's normal destination; a selected-peer send first flushes any pending
  * shared batch there, then sends its message directly without entering the shared batch.
  */
-static _z_transport_tx_dest_t _z_transport_tx_dest_default(void) { return _z_transport_tx_dest_none(); }
+static inline _z_transport_tx_dest_t _z_transport_tx_dest_default(void) { return _z_transport_tx_dest_none(); }
 
-static _z_transport_tx_dest_t _z_transport_tx_dest_peer_list(_z_transport_peer_unicast_slist_t *peers) {
+static inline _z_transport_tx_dest_t _z_transport_tx_dest_peer_list(_z_transport_peer_unicast_slist_t *peers) {
     return _z_transport_tx_dest_from_peer_list(&peers);
 }
 
-static _z_transport_tx_dest_t _z_transport_tx_dest_link_peer(const _z_link_peer_t *peer) {
+static inline _z_transport_tx_dest_t _z_transport_tx_dest_link_peer(const _z_link_peer_t *peer) {
     return _z_transport_tx_dest_from_link_peer(&peer);
 }
 
-static bool _z_transport_tx_dest_is_default(const _z_transport_tx_dest_t *dest) {
+static inline bool _z_transport_tx_dest_is_default(const _z_transport_tx_dest_t *dest) {
     return _z_transport_tx_dest_is_none(dest);
 }
 
-static _z_transport_peer_unicast_slist_t *_z_transport_tx_dest_peer_list_value(const _z_transport_tx_dest_t *dest) {
+static inline _z_transport_peer_unicast_slist_t *_z_transport_tx_dest_peer_list_value(
+    const _z_transport_tx_dest_t *dest) {
     return *_z_transport_tx_dest_const_get_peer_list(dest);
 }
 
-static const _z_link_peer_t *_z_transport_tx_dest_link_peer_value(const _z_transport_tx_dest_t *dest) {
+static inline const _z_link_peer_t *_z_transport_tx_dest_link_peer_value(const _z_transport_tx_dest_t *dest) {
     return *_z_transport_tx_dest_const_get_link_peer(dest);
 }
 
