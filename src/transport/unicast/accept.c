@@ -77,6 +77,13 @@ _z_fut_fn_result_t _zp_unicast_accept_task_fn(void *ctx, _z_executor_t *executor
         return _z_fut_fn_result_wake_up_after(1000);
     }
 
+    ret = _z_link_accept_peer_complete(ztu->_common._link, &link_peer);
+    if (ret != _Z_RES_OK) {
+        _Z_INFO("Connection accept completion failed with error %d", ret);
+        _z_link_peer_clear(&link_peer);
+        return _z_fut_fn_result_continue();
+    }
+
     _z_transport_unicast_establish_param_t param = {0};
     ret = _z_unicast_handshake_listen(&param, ztu->_common._link,
                                       &_z_transport_common_get_session(&ztu->_common)->_local_zid, Z_WHATAMI_PEER,

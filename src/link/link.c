@@ -335,6 +335,17 @@ z_result_t _z_link_accept_peer(const _z_link_t *zl, _z_link_peer_t *peer) {
     return _Z_RES_OK;
 }
 
+z_result_t _z_link_accept_peer_complete(const _z_link_t *zl, _z_link_peer_t *peer) {
+    if ((zl == NULL) || (peer == NULL)) {
+        _Z_ERROR_RETURN(_Z_ERR_INVALID);
+    }
+
+    if (zl->_accept_peer_complete_f == NULL) {
+        return _Z_RES_OK;
+    }
+    return zl->_accept_peer_complete_f(zl, peer);
+}
+
 size_t _z_link_recv_zbuf(const _z_link_t *link, _z_zbuf_t *zbf, _z_slice_t *addr) {
     size_t rb = link->_read_f(link, _z_zbuf_get_wptr(zbf), _z_zbuf_writable_space_left(zbf), addr);
     if (rb != SIZE_MAX) {

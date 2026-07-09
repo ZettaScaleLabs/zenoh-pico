@@ -89,7 +89,8 @@ typedef z_result_t (*_z_f_link_wait_peers_readable)(const struct _z_link_t *self
 typedef z_result_t (*_z_f_link_open_peer)(const struct _z_link_t *self, struct _z_link_peer_t *peer,
                                           const _z_string_t *locator, const _z_config_t *session_cfg);
 typedef z_result_t (*_z_f_link_peer_from_link)(const struct _z_link_t *self, struct _z_link_peer_t *peer);
-typedef z_result_t (*_z_f_link_accept)(const struct _z_link_t *self, struct _z_link_peer_t *peer);
+typedef z_result_t (*_z_f_link_accept_peer)(const struct _z_link_t *self, struct _z_link_peer_t *peer);
+typedef z_result_t (*_z_f_link_accept_peer_complete)(const struct _z_link_t *self, struct _z_link_peer_t *peer);
 typedef void (*_z_link_state_drop_f)(void *state);
 
 typedef void (*_z_link_peer_iter_reset_f)(struct _z_link_peer_iter_t *iter);
@@ -211,7 +212,11 @@ typedef struct _z_link_t {
     _z_f_link_wait_peers_readable _wait_peers_readable_f;
     _z_f_link_open_peer _open_peer_f;
     _z_f_link_peer_from_link _peer_from_link_f;
-    _z_f_link_accept _accept_peer_f;
+    // Performs only the minimal accept needed to create the provisional peer.
+    _z_f_link_accept_peer _accept_peer_f;
+    // Optionally finishes protocol-specific setup, such as a TLS handshake,
+    // after transport-level admission checks.
+    _z_f_link_accept_peer_complete _accept_peer_complete_f;
 
     uint16_t _mtu;
     _z_link_capabilities_t _cap;
@@ -227,6 +232,7 @@ z_result_t _z_link_peer_from_default(const _z_link_t *zl, _z_link_peer_t *peer);
 z_result_t _z_link_peer_from_link(const _z_link_t *zl, _z_link_peer_t *peer);
 bool _z_link_can_accept_peers(const _z_link_t *zl);
 z_result_t _z_link_accept_peer(const _z_link_t *zl, _z_link_peer_t *peer);
+z_result_t _z_link_accept_peer_complete(const _z_link_t *zl, _z_link_peer_t *peer);
 z_result_t _z_open_link(_z_link_t *zl, const _z_string_t *locator, const _z_config_t *session_cfg);
 z_result_t _z_listen_link(_z_link_t *zl, const _z_string_t *locator, const _z_config_t *session_cfg);
 

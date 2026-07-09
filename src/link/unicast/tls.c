@@ -308,9 +308,21 @@ static z_result_t _z_f_link_accept_tls(const _z_link_t *link, _z_link_peer_t *pe
 
     _Z_CLEAN_RETURN_IF_ERR(_z_link_socket_peer_set_blocking(peer, true), _z_link_peer_clear(peer));
 
-    _Z_CLEAN_RETURN_IF_ERR(_z_tls_accept(_z_link_socket_peer_get_socket(peer), listen_socket),
-                           _z_link_peer_clear(peer));
     return _Z_RES_OK;
+}
+
+static z_result_t _z_f_link_accept_peer_complete_tls(const _z_link_t *link, _z_link_peer_t *peer) {
+    if ((link == NULL) || (peer == NULL)) {
+        _Z_ERROR_RETURN(_Z_ERR_INVALID);
+    }
+
+    const _z_sys_net_socket_t *listen_socket = _z_link_socket_peer_get_socket_const(&link->_peer);
+    _z_sys_net_socket_t *socket = _z_link_socket_peer_get_socket(peer);
+    if ((listen_socket == NULL) || (socket == NULL)) {
+        _Z_ERROR_RETURN(_Z_ERR_INVALID);
+    }
+
+    return _z_tls_accept(socket, listen_socket);
 }
 
 z_result_t _z_new_link_tls(_z_link_t *zl, _z_endpoint_t *endpoint, const _z_config_t *session_cfg) {
@@ -346,6 +358,7 @@ z_result_t _z_new_link_tls(_z_link_t *zl, _z_endpoint_t *endpoint, const _z_conf
     zl->_open_peer_f = _z_f_link_open_peer_tls;
     zl->_peer_from_link_f = _z_link_peer_from_default;
     zl->_accept_peer_f = _z_f_link_accept_tls;
+    zl->_accept_peer_complete_f = _z_f_link_accept_peer_complete_tls;
 
     return _Z_RES_OK;
 }
