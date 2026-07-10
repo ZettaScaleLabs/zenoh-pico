@@ -55,22 +55,6 @@ z_result_t _z_endpoint_udp_multicast_valid(_z_endpoint_t *endpoint) {
     return _Z_RES_OK;
 }
 
-z_result_t _z_f_link_open_udp_multicast(_z_link_t *self) {
-    _z_udp_multicast_link_t *link = _z_udp_multicast_link(self);
-    if (link == NULL) {
-        _Z_ERROR_RETURN(_Z_ERR_INVALID);
-    }
-
-    uint32_t tout = Z_CONFIG_SOCKET_TIMEOUT;
-    char *tout_as_str = _z_str_intmap_get(&self->_endpoint._config, UDP_CONFIG_TOUT_KEY);
-    if (tout_as_str != NULL) {
-        tout = (uint32_t)strtoul(tout_as_str, NULL, 10);
-    }
-
-    const char *iface = _z_str_intmap_get(&self->_endpoint._config, UDP_CONFIG_IFACE_KEY);
-    return _z_udp_multicast_open(&link->_udp._sock, link->_udp._rep, &link->_udp._lep, tout, iface);
-}
-
 z_result_t _z_f_link_listen_udp_multicast(_z_link_t *self) {
     _z_udp_multicast_link_t *link = _z_udp_multicast_link(self);
     if (link == NULL) {
